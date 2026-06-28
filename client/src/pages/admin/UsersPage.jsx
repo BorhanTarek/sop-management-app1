@@ -56,8 +56,8 @@ function UserModal({ user, onClose, onSaved }) {
             </div>
           </div>
           <div className="form-group">
-            <label className="form-label">Email *</label>
-            <input type="email" className="form-control" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required disabled={isEdit} />
+            <label className="form-label">Username *</label>
+            <input type="text" className="form-control" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required disabled={isEdit} />
           </div>
           {!isEdit && (
             <div className="form-group">
@@ -145,7 +145,7 @@ export default function UsersPage() {
           <table>
             <thead>
               <tr>
-                <th>Name</th><th>Email</th><th>Department</th>
+                <th>Name</th><th>Username</th><th>Department</th>
                 <th>Roles</th><th>Status</th><th>Actions</th>
               </tr>
             </thead>

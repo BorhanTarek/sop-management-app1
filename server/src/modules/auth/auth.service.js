@@ -3,8 +3,13 @@ const prisma = require('../../config/db');
 const { signToken } = require('../../utils/jwt');
 
 async function login(email, password) {
-  const user = await prisma.user.findUnique({
-    where: { email },
+  const user = await prisma.user.findFirst({
+    where: {
+      email: {
+        equals: email,
+        mode: 'insensitive',
+      },
+    },
     include: { roles: { include: { role: true } } },
   });
   if (!user || !user.isActive) {

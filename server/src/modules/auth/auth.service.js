@@ -7,27 +7,36 @@ async function login(email, password) {
     where: {
       email: {
         equals: email,
-        mode: 'insensitive',
       },
     },
     include: { roles: { include: { role: true } } },
   });
-  if (!user || !user.isActive) {
+  
+  // If not found with exact match, do a fallback case-insensitive search
+  let matchedUser = user;
+  if (!matchedUser) {
+    const allUsers = await prisma.user.findMany({
+      include: { roles: { include: { role: true } } },
+    });
+    matchedUser = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+  }
+
+  if (!matchedUser || !matchedUser.isActive) {
     throw Object.assign(new Error('Invalid credentials'), { status: 401 });
   }
-  const valid = await bcrypt.compare(password, user.passwordHash);
+  const valid = await bcrypt.compare(password, matchedUser.passwordHash);
   if (!valid) {
     throw Object.assign(new Error('Invalid credentials'), { status: 401 });
   }
-  const roles = user.roles.map((ur) => ur.role.name);
-  const token = signToken({ userId: user.id, email: user.email, roles });
+  const roles = matchedUser.roles.map((ur) => ur.role.name);
+  const token = signToken({ userId: matchedUser.id, email: matchedUser.email, roles });
   return {
     token,
     user: {
-      id: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      department: user.department,
+      id: matchedUser.id,
+      email: matchedUser.email,
+      fullName: matchedUser.fullName,
+      department: matchedUser.department,
       roles,
     },
   };

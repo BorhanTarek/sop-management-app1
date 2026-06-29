@@ -1,58 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, ArrowUp, ArrowDown, Save, ArrowLeft, Loader, ChevronRight } from 'lucide-react';
+import { Save, ArrowLeft, Loader, ChevronRight } from 'lucide-react';
 import { sopService, categoryService, userService } from '../../services/services';
 import { useAuthStore } from '../../store/authStore';
+import StepBuilder from '../../components/sop/StepBuilder';
 
-const DOC_TYPES  = ['SOP', 'Safety Notice', 'Work Instruction'];
-const STEP_TYPES = ['action', 'decision', 'reference'];
+const DOC_TYPES = ['SOP', 'Safety Notice', 'Work Instruction'];
 
-/* ── Step Builder ────────────────────────────────────── */
-function StepBuilder({ steps, setSteps }) {
-  const addStep = () => setSteps(s => [
-    ...s,
-    { id: Date.now(), title: '', body: '', stepType: 'action', refCode: '', sortOrder: s.length }
-  ]);
-  const update = (idx, key, val) => setSteps(s => s.map((st, i) => i === idx ? { ...st, [key]: val } : st));
-  const remove = (idx) => setSteps(s => s.filter((_, i) => i !== idx));
-  const move = (idx, dir) => {
-    const arr = [...steps]; const swap = idx + dir;
-    if (swap < 0 || swap >= arr.length) return;
-    [arr[idx], arr[swap]] = [arr[swap], arr[idx]]; setSteps(arr);
-  };
-  return (
-    <div className="step-builder">
-      {steps.map((step, idx) => (
-        <div key={step.id || idx} className={`step-item${step.stepType === 'decision' ? ' decision' : ''}`}>
-          <div className="step-num">{idx + 1}</div>
-          <div className="step-content">
-            <div className="grid-2" style={{ marginBottom: 6 }}>
-              <input className="form-control" placeholder="Step title *" value={step.title}
-                onChange={e => update(idx, 'title', e.target.value)} />
-              <select className="form-control" value={step.stepType} onChange={e => update(idx, 'stepType', e.target.value)}>
-                {STEP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div className="grid-2">
-              <input className="form-control" placeholder="Description (optional)" value={step.body || ''}
-                onChange={e => update(idx, 'body', e.target.value)} />
-              <input className="form-control" placeholder="Ref code e.g. WI-RTM-H11" value={step.refCode || ''}
-                onChange={e => update(idx, 'refCode', e.target.value)} />
-            </div>
-          </div>
-          <div className="step-actions">
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => move(idx, -1)}><ArrowUp size={12} /></button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => move(idx, 1)}><ArrowDown size={12} /></button>
-            <button type="button" className="btn btn-danger btn-sm" onClick={() => remove(idx)}><Trash2 size={12} /></button>
-          </div>
-        </div>
-      ))}
-      <button type="button" className="btn btn-secondary" onClick={addStep} style={{ alignSelf: 'flex-start' }}>
-        <Plus size={14} /> Add Step
-      </button>
-    </div>
-  );
-}
+/* StepBuilder is imported from ../../components/sop/StepBuilder */
 
 /* ── Category / Sub-category Selector ───────────────── */
 function CategorySelector({ tree, categoryId, onChange }) {
@@ -171,7 +126,7 @@ export default function SOPCreatePage() {
     docType: 'SOP', tags: '',
   });
   const [steps, setSteps] = useState([
-    { id: 1, title: '', body: '', stepType: 'action', refCode: '', sortOrder: 0 }
+    { id: 1, title: '', body: '', stepType: 'action', refCode: '', sortOrder: 0, yesBranch: [], noBranch: [] }
   ]);
 
   useEffect(() => {
@@ -190,6 +145,21 @@ export default function SOPCreatePage() {
     return flat.find(c => c.id === form.categoryId)?.name;
   };
 
+  // Serialize branch arrays to JSON string before sending to API.
+  // KEY RULE: Decision steps never have a top-level refCode — WI codes live
+  // on each individual branch sub-step inside yesBranch / noBranch.
+  const prepareStepsForAPI = (rawSteps) =>
+    rawSteps
+      .filter(s => s.title?.trim())
+      .map(s => ({
+        ...s,
+        // Decision steps: WI code is null at the question level — it's inside branchData sub-steps
+        refCode: s.stepType === 'decision' ? null : (s.refCode || null),
+        branchData: s.stepType === 'decision'
+          ? JSON.stringify({ yesBranch: s.yesBranch || [], noBranch: s.noBranch || [] })
+          : null,
+      }));
+
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true); setError('');
@@ -197,7 +167,7 @@ export default function SOPCreatePage() {
       await sopService.create({
         ...form,
         ownerId: form.ownerId || user?.id,
-        steps: steps.filter(s => s.title.trim()),
+        steps: prepareStepsForAPI(steps),
       });
       navigate('/admin/sops');
     } catch (err) {

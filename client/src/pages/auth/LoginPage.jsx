@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { Lock, User, Eye, EyeOff, Loader } from 'lucide-react';
+import ratpLogo from '../../assets/RDMC LOGO.jpg';
+import mobilityLogo from '../../assets/Logo-Mobility-Cairo.png';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('Admin');
@@ -29,10 +31,14 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-logo">
-          <div className="login-logo-mark">GL</div>
-          <h1>Green Line</h1>
-          <p>Standard Operating Procedures</p>
+        <div className="login-logo" style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 16 }}>
+            <img src={mobilityLogo} alt="Mobility Cairo Logo" style={{ height: 46, objectFit: 'contain' }} />
+            <div style={{ width: 1.5, height: 32, background: 'rgba(255,255,255,0.15)' }} />
+            <img src={ratpLogo} alt="RATP Dev Logo" style={{ height: 30, objectFit: 'contain', borderRadius: 3 }} />
+          </div>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)' }}>Green Line</h1>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>Standard Operating Procedures Portal</p>
         </div>
 
         {error && (

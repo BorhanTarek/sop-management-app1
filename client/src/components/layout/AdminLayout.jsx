@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Users, FolderTree, FileText,
   LogOut, ChevronRight, Bell
 } from 'lucide-react';
+import mobilityLogo from '../../assets/Logo-Mobility-Cairo.png';
 
 const navItems = [
   { label: 'Dashboard',   path: '/admin',            icon: LayoutDashboard, exact: true },
@@ -24,7 +25,7 @@ export default function AdminLayout() {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <div className="sidebar-logo-mark">GL</div>
+          <img src={mobilityLogo} style={{ width: 26, height: 26, objectFit: 'contain', marginRight: 2 }} alt="Mobility Cairo Logo" />
           <div className="sidebar-logo-text">
             Green Line
             <small>SOP Management</small>

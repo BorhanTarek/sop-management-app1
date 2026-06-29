@@ -363,15 +363,228 @@ td .cell-primary { color: var(--text-primary); font-weight: 500; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
 
 /* ─── SOP Step Builder ──────────────────────────────── */
-.step-builder { display: flex; flex-direction: column; gap: 10px; }
-.step-item {
+.step-builder { display: flex; flex-direction: column; gap: 12px; }
+
+/* Step card wrapper */
+.step-card {
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.step-card--action    { border-left-color: var(--brand-primary); }
+.step-card--decision  { border-left-color: #f59e0b; background: rgba(245,158,11,0.03); }
+.step-card--reference { border-left-color: #818cf8; background: rgba(129,140,248,0.03); }
+.step-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+.step-card--decision:hover  { border-color: #f59e0b; }
+.step-card--reference:hover { border-color: #818cf8; }
+
+/* Step card header row */
+.step-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.08);
+}
+.step-card-num {
+  width: 24px; height: 24px; flex-shrink: 0;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700; color: #fff;
+}
+.step-card-actions { display: flex; gap: 3px; margin-left: auto; }
+
+/* Type toggle pills */
+.step-type-toggle { display: flex; gap: 4px; }
+.step-type-btn {
+  padding: 3px 10px;
+  font-size: 0.7rem; font-weight: 600;
+  border-radius: 99px;
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+  background: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.step-type-btn:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+.step-type-btn.active { font-weight: 700; }
+
+/* Step card body */
+.step-card-body { padding: 12px 14px; }
+
+/* Decision step: question row */
+.decision-question-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.decision-diamond-icon {
+  font-size: 1.4rem;
+  color: #f59e0b;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.decision-title-input { font-weight: 500 !important; font-size: 0.9rem !important; }
+
+/* Decision yes/no branch panels */
+.decision-branches {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.branch-panel {
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  overflow: hidden;
+}
+.branch-panel--yes { border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.04); }
+.branch-panel--no  { border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.04); }
+
+.branch-panel-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  font-size: 0.72rem; font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+.branch-panel--yes .branch-panel-header { color: #22c55e; background: rgba(34,197,94,0.08); }
+.branch-panel--no  .branch-panel-header { color: #ef4444; background: rgba(239,68,68,0.08); }
+.branch-step-count {
+  margin-left: auto;
+  font-size: 0.65rem; font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* ─── WI Code input (teal badge prefix + text field) ─── */
+/* Used in StepBuilder for both action step cards and branch sub-steps */
+.wi-code-input-wrap {
+  display: flex;
+  align-items: stretch;
+  margin-top: 6px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid rgba(26,158,150,0.4);
+  max-width: 220px;
+  transition: border-color var(--transition);
+}
+.wi-code-input-wrap:focus-within {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(26,158,150,0.12);
+}
+.wi-code-prefix {
+  background: var(--brand-primary);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  white-space: nowrap;
+  user-select: none;
+}
+.wi-code-field {
+  border: none !important;
+  border-radius: 0 !important;
+  background: var(--bg-input) !important;
+  font-size: 0.8rem !important;
+  font-family: monospace !important;
+  padding: 6px 10px !important;
+  flex: 1;
+  min-width: 0;
+  box-shadow: none !important;
+}
+.wi-code-field::placeholder { font-family: monospace; color: var(--text-muted); }
+
+/* Action step main row: title + WI code side by side */
+.action-step-main-row {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  background: var(--bg-surface);
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.action-step-main-row .form-control:first-child { flex: 1; min-width: 200px; }
+.action-step-main-row .wi-code-input-wrap { flex-shrink: 0; margin-top: 0; }
+
+/* Decision step: notice that WI code moved to branch sub-steps */
+.decision-wi-notice {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  padding: 5px 10px;
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+}
+
+
+
+.branch-panel-steps { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+
+/* Row for a single sub-step inside a branch */
+.branch-step-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition);
+}
+.branch-step-row:hover { border-color: rgba(26,158,150,0.3); }
+.branch-step-letter {
+  width: 20px; height: 20px; flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; font-weight: 700; color: var(--text-muted);
+  margin-top: 8px;
+}
+.branch-step-fields { flex: 1; min-width: 0; }
+.branch-empty {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 4px 0 6px;
+}
+
+/* Ghost add button inside a branch */
+.btn-branch-add {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 8px;
+  font-size: 0.72rem; font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  margin-top: 2px;
+}
+.btn-branch-add:hover { color: var(--brand-accent); border-color: var(--brand-primary); }
+
+/* Add step row at the bottom of builder */
+.step-add-row { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.step-add-btn--decision  { color: #f59e0b !important; border-color: rgba(245,158,11,0.4) !important; }
+.step-add-btn--reference { color: #818cf8 !important; border-color: rgba(129,140,248,0.4) !important; }
+.step-add-btn--decision:hover  { background: rgba(245,158,11,0.08) !important; border-color: #f59e0b !important; }
+.step-add-btn--reference:hover { background: rgba(129,140,248,0.08) !important; border-color: #818cf8 !important; }
+
+/* Legacy step-item / step-num kept for any other uses */
+.step-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 12px 16px;
   transition: border-color var(--transition);
 }
 .step-item:hover { border-color: rgba(26,158,150,0.3); }
@@ -385,6 +598,72 @@ td .cell-primary { color: var(--text-primary); font-weight: 500; }
 .step-item.decision .step-num { background: linear-gradient(135deg, var(--warning), #d97706); }
 .step-content { flex: 1; }
 .step-actions { display: flex; gap: 4px; }
+
+/* ─── Decision Flowchart Viewer ─────────────────────── */
+.decision-flow-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.decision-flow-diamond-wrap {
+  display: flex; justify-content: center; margin-bottom: 0;
+}
+.decision-flow-diamond {
+  background: var(--bg-card);
+  border: 2.5px solid #f59e0b;
+  border-radius: 6px;
+  transform: rotate(45deg);
+  width: 160px; height: 160px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 16px rgba(245,158,11,0.15);
+  flex-shrink: 0;
+}
+.decision-flow-diamond span {
+  transform: rotate(-45deg);
+  display: block;
+  max-width: 110px;
+}
+.decision-flow-branches {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 580px;
+  margin-top: 12px;
+}
+.decision-flow-branch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.decision-flow-branch-connector {
+  width: 1px; height: 24px;
+  position: relative;
+}
+.decision-flow-branch--yes .decision-flow-branch-connector { background: #22c55e; }
+.decision-flow-branch--no  .decision-flow-branch-connector { background: #ef4444; }
+.decision-flow-branch-connector::before {
+  content: attr(data-label);
+  position: absolute;
+  top: 50%; transform: translateY(-50%);
+  left: 6px;
+  font-size: 0.65rem; font-weight: 700;
+  white-space: nowrap;
+}
+.decision-flow-branch--yes .decision-flow-branch-connector::before { color: #16a34a; }
+.decision-flow-branch--no  .decision-flow-branch-connector::before { color: #dc2626; }
+.decision-flow-branch-panel {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1.5px solid;
+  padding: 10px 12px;
+}
+.decision-flow-branch-panel.yes { border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.05); }
+.decision-flow-branch-panel.no  { border-color: rgba(239,68,68,0.4);  background: rgba(239,68,68,0.05); }
+.decision-flow-branch-header { margin-bottom: 4px; }
+
+
 
 /* ─── Category Tree ─────────────────────────────────── */
 .cat-tree { padding: 4px 0; }

@@ -14,7 +14,7 @@ async function getAll({ status, categoryId, docType, search, page = 1, limit = 2
     ...(status && { status }),
     ...(categoryId && { categoryId }),
     ...(docType && { docType }),
-    ...(search && { title: { contains: search } }),
+    ...(search && { title: { contains: search, mode: 'insensitive' } }),
   };
   const [sops, total] = await Promise.all([
     prisma.sop.findMany({
@@ -38,10 +38,29 @@ async function getById(id) {
     include: {
       category: true,
       owner: { select: { id: true, fullName: true, email: true } },
-      steps: { orderBy: { sortOrder: 'asc' } },
+      versions: {
+        where: { isCurrent: true },
+        take: 1,
+      },
     },
   });
+
   if (!sop) throw Object.assign(new Error('SOP not found'), { status: 404 });
+
+  const currentVersionId = sop.versions[0]?.id || null;
+
+  // Query only the steps belonging to the current active version
+  const steps = currentVersionId
+    ? await prisma.sopStep.findMany({
+        where: { versionId: currentVersionId },
+        orderBy: { sortOrder: 'asc' },
+      })
+    : [];
+
+  // Delete versions relation and assign steps to match the expected format
+  delete sop.versions;
+  sop.steps = steps;
+
   return sop;
 }
 
@@ -83,6 +102,7 @@ async function create({ title, referenceCode, categoryId, ownerId, docType, tags
         stepType: s.stepType || 'action',
         refCode: s.refCode,
         sortOrder: i,
+        branchData: s.branchData || null,
       })),
     });
   }
@@ -129,6 +149,7 @@ async function update(id, { title, categoryId, ownerId, docType, tags, steps, co
         stepType: s.stepType || 'action',
         refCode: s.refCode,
         sortOrder: i,
+        branchData: s.branchData || null,
       })),
     });
   }

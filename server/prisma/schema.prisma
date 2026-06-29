@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -135,6 +135,7 @@ model SopStep {
   refCode      String?
   parentStepId String?
   sortOrder    Int      @default(0)
+  branchData   String?  // JSON: { yesBranch:[...], noBranch:[...] } for decision steps
 
   sop       Sop         @relation(fields: [sopId], references: [id], onDelete: Cascade)
   version   SopVersion? @relation(fields: [versionId], references: [id])

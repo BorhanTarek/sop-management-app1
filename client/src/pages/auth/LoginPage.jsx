@@ -6,8 +6,8 @@ import ratpLogo from '../../assets/RDMC LOGO.jpg';
 import mobilityLogo from '../../assets/Logo-Mobility-Cairo.png';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('Admin');
-  const [password, setPassword] = useState('123123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

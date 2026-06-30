@@ -6,6 +6,8 @@ import StepBuilder from '../../components/sop/StepBuilder';
 
 const DOC_TYPES = ['SOP', 'Safety Notice', 'Work Instruction'];
 
+/* StepBuilder imported from ../../components/sop/StepBuilder */
+
 /* ── Category / Sub-category Selector ───────────────── */
 function CategorySelector({ tree, categoryId, onChange }) {
   const initialRoot = categoryId
@@ -19,6 +21,7 @@ function CategorySelector({ tree, categoryId, onChange }) {
     categoryId && categoryId !== initialRoot ? categoryId : ''
   );
 
+  // Re-sync when categoryId prop changes (e.g. after data loads)
   useEffect(() => {
     if (!categoryId) { setSelectedRoot(''); setSelectedSub(''); return; }
     const rootMatch = tree.find(r => r.id === categoryId);
@@ -136,7 +139,7 @@ export default function SOPEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [sop, setSop] = useState(null);
-  const [tree, setTree]   = useState([]);
+  const [tree, setTree]   = useState([]);   // category tree with children
   const [users, setUsers] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
@@ -155,6 +158,7 @@ export default function SOPEditPage() {
       const s = sopRes.data;
       setSop(s);
       setForm({ title: s.title, referenceCode: s.referenceCode || '', categoryId: s.categoryId || '', ownerId: s.ownerId || '', docType: s.docType, tags: s.tags || '' });
+      // Parse branchData JSON back to yesBranch/noBranch arrays for the StepBuilder
       setSteps((s.steps || []).map((st, i) => {
         let yesBranch = [], noBranch = [];
         if (st.branchData) {
@@ -169,18 +173,22 @@ export default function SOPEditPage() {
           safetyPoints: st.safetyPoints || [],
         };
       }));
-      setTree(catRes.data);
+      setTree(catRes.data);       // store as tree (with children)
       setUsers(userRes.data);
     }).finally(() => setLoading(false));
   }, [id]);
 
   const setField = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
+  // Serialize branch arrays to JSON before sending to API.
+  // KEY RULE: Decision steps never have a top-level refCode — WI codes live
+  // on each individual branch sub-step inside yesBranch / noBranch.
   const prepareStepsForAPI = (rawSteps) =>
     rawSteps
       .filter(s => s.title?.trim())
       .map(s => ({
         ...s,
+        // Decision steps: WI code is null at the question level — it's inside branchData sub-steps
         refCode: s.stepType === 'decision' ? null : (s.refCode || null),
         branchData: s.stepType === 'decision'
           ? JSON.stringify({ yesBranch: s.yesBranch || [], noBranch: s.noBranch || [] })

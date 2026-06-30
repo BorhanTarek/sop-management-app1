@@ -41,7 +41,7 @@ function WIBadge({ code, radius = '6px 0 0 6px' }) {
         background: '#0d9488', color: '#fff',
         fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.07em',
         padding: '0 8px',
-        display: 'flex', alignItems: 'center', justify-content: 'center',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         borderRadius: radius,
         flexShrink: 0,
       }}>WI</div>
@@ -128,7 +128,7 @@ function BadgeColumn({ step }) {
                 background: isOpen ? color : 'var(--bg-surface)',
                 border: `2.5px solid ${color}`,
                 color: isOpen ? '#fff' : color,
-                display: 'flex', alignItems: 'center', justify-content: 'center',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.03em',
                 cursor: 'pointer', flexShrink: 0,
                 boxShadow: isOpen
@@ -184,7 +184,7 @@ function BadgeColumn({ step }) {
                   <span style={{
                     width: 18, height: 18, borderRadius: '50%',
                     background: color, color: '#fff', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justify-content: 'center',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '0.56rem', fontWeight: 900,
                   }}>
                     {label}
@@ -331,7 +331,7 @@ function BranchStep({ step, idx, isLast, borderColor }) {
           <div style={{
             width: 22, height: 22, borderRadius: '50%',
             background: 'var(--bg-hover)', border: '1.5px solid var(--border)',
-            display: 'flex', alignItems: 'center', justify-content: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)',
             flexShrink: 0, alignSelf: 'center', marginRight: 8,
           }}>{String.fromCharCode(65 + idx)}</div>
@@ -356,7 +356,7 @@ function BranchStep({ step, idx, isLast, borderColor }) {
 
       {/* Tiny connector between sub-steps */}
       {!isLast && (
-        <div style={{ display: 'flex', justify-content: 'center', padding: '3px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '3px 0' }}>
           <div style={{ width: 1.5, height: 10, background: 'var(--border)' }} />
         </div>
       )}
@@ -447,7 +447,7 @@ function DecisionBlock({ step, uid }) {
           <foreignObject x={textX} y={textY} width={textW} height={textH}>
             <div style={{
               width: '100%', height: '100%',
-              display: 'flex', alignItems: 'center', justify-content: 'center',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)',
               textAlign: 'center', lineHeight: 1.35,
               padding: '0 6px', wordBreak: 'break-word',
@@ -486,7 +486,7 @@ function DecisionBlock({ step, uid }) {
               fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
-              justify-content: 'center',
+              justifyContent: 'center',
               height: '100%',
               userSelect: 'none',
             }}>
@@ -505,7 +505,7 @@ function DecisionBlock({ step, uid }) {
               fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
-              justify-content: 'center',
+              justifyContent: 'center',
               height: '100%',
               userSelect: 'none',
             }}>
@@ -531,7 +531,7 @@ function DecisionBlock({ step, uid }) {
                         color: '#22c55e', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.06em' }}>
             <CheckCircle size={13} /> YES PATH
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justify-content: 'flex-start', gap: 8 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 8 }}>
             {yes.length === 0
               ? <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '6px 0' }}>No steps defined</div>
               : yes.map((bs, i) => <BranchStep key={i} step={bs} idx={i} isLast={i === yes.length - 1} borderColor="rgba(34,197,94,0.25)" />)
@@ -550,7 +550,7 @@ function DecisionBlock({ step, uid }) {
                         color: '#ef4444', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.06em' }}>
             <XCircle size={13} /> NO PATH
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justify-content: 'flex-start', gap: 8 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 8 }}>
             {no.length === 0
               ? <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '6px 0' }}>No steps defined</div>
               : no.map((bs, i) => <BranchStep key={i} step={bs} idx={i} isLast={i === no.length - 1} borderColor="rgba(239,68,68,0.25)" />)
@@ -703,7 +703,7 @@ export default function SOPViewPage() {
         <button onClick={() => navigate(-1)} style={{
           background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
           borderRadius: '50%', width: 36, height: 36,
-          display: 'flex', alignItems: 'center', justify-content: 'center', color: '#fff', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer',
         }}>
           <ArrowLeft size={16} />
         </button>

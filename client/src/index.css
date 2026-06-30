@@ -527,6 +527,8 @@ td .cell-primary { color: var(--text-primary); font-weight: 500; }
   line-height: 1.4;
 }
 
+
+
 .branch-panel-steps { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
 
 /* Row for a single sub-step inside a branch */

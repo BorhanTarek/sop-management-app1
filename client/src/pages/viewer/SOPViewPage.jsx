@@ -41,7 +41,7 @@ function WIBadge({ code, radius = '6px 0 0 6px' }) {
         background: '#0d9488', color: '#fff',
         fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.07em',
         padding: '0 8px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex', alignItems: 'center', justify-content: 'center',
         borderRadius: radius,
         flexShrink: 0,
       }}>WI</div>
@@ -63,46 +63,255 @@ function WIBadge({ code, radius = '6px 0 0 6px' }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ACTION / REFERENCE NODE
-   ─ WI badge is left-fused to the card so it looks like one connected unit
+   BADGE COLUMN  — sits to the RIGHT of the step card
+   Each badge row: [horizontal connector line] [circle badge]
+   Clicking a badge opens a popup to the right of it.
+   State key: 'P-0', 'P-1', 'S-0' etc. — only one popup open at a time.
    ═══════════════════════════════════════════════════════════════════════════ */
-function ActionNode({ step }) {
-  const hasWI  = !!step.refCode;
-  const isRef  = step.stepType === 'reference';
-  const border = isRef ? '#818cf8' : '#0d9488';
-  const hoverShadow = isRef ? 'rgba(129,140,248,0.2)' : 'rgba(13,148,136,0.2)';
+function BadgeColumn({ step }) {
+  const pts = step.attentionPoints || [];
+  const sps = step.safetyPoints    || [];
+  const [openKey, setOpenKey] = useState(null);
+
+  if (pts.length === 0 && sps.length === 0) return null;
+
+  const toggle = (key) => setOpenKey(prev => (prev === key ? null : key));
+
+  // Flatten all badges into one ordered list: P badges first, then S badges
+  const allBadges = [
+    ...pts.map((b, i) => ({ prefix: 'P', idx: i, badge: b, color: '#16a34a', glow: 'rgba(22,163,74,0.28)' })),
+    ...sps.map((b, i) => ({ prefix: 'S', idx: i, badge: b, color: '#dc2626', glow: 'rgba(220,38,38,0.28)' })),
+  ];
 
   return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      gap: 10,
+      flexShrink: 0,
+      alignSelf: 'stretch',
+      paddingTop: 4,
+      paddingBottom: 4,
+    }}>
+      {allBadges.map(({ prefix, idx, badge, color, glow }) => {
+        const key    = `${prefix}-${idx}`;
+        const label  = `${prefix}${idx + 1}`;
+        const isOpen = openKey === key;
+        const text   = typeof badge === 'object' ? (badge.text || '') : '';
+        const typeLabel = prefix === 'P' ? 'Point of Attention' : 'Safety Point';
+
+        return (
+          <div
+            key={key}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              position: 'relative',
+            }}
+          >
+            {/* ── Horizontal connector line ── */}
+            <div style={{
+              width: 22,
+              height: 2,
+              background: `linear-gradient(to right, ${color}55, ${color}cc)`,
+              flexShrink: 0,
+              borderRadius: 1,
+            }} />
+
+            {/* ── Clickable badge circle ── */}
+            <button
+              onClick={() => toggle(key)}
+              style={{
+                width: 30, height: 30,
+                borderRadius: '50%',
+                background: isOpen ? color : 'var(--bg-surface)',
+                border: `2.5px solid ${color}`,
+                color: isOpen ? '#fff' : color,
+                display: 'flex', alignItems: 'center', justify-content: 'center',
+                fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.03em',
+                cursor: 'pointer', flexShrink: 0,
+                boxShadow: isOpen
+                  ? `0 0 0 4px ${glow}, 0 4px 14px ${glow}`
+                  : `0 2px 6px rgba(0,0,0,0.3)`,
+                transform: isOpen ? 'scale(1.15)' : 'scale(1)',
+                transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+                outline: 'none',
+                zIndex: 2,
+              }}
+              title={isOpen ? `Close ${label}` : `${typeLabel} — click to read`}
+            >
+              {label}
+            </button>
+
+            {/* ── Popup panel (opens to the LEFT, toward the card) ── */}
+            {isOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 58,          /* opens left of the badge, toward card */
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  zIndex: 30,
+                  width: 210,
+                  background: 'var(--bg-card)',
+                  border: `1.5px solid ${color}`,
+                  borderRadius: 10,
+                  padding: '11px 14px',
+                  boxShadow: `0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px ${glow}`,
+                  animation: 'badgePop 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+                }}
+              >
+                {/* Arrow pointer pointing RIGHT toward the badge */}
+                <div style={{
+                  position: 'absolute',
+                  right: -8,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: 0, height: 0,
+                  borderTop: '7px solid transparent',
+                  borderBottom: '7px solid transparent',
+                  borderLeft: `8px solid ${color}`,
+                }} />
+
+                {/* Popup header */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  marginBottom: 8,
+                  color, fontSize: '0.66rem', fontWeight: 800,
+                  textTransform: 'uppercase', letterSpacing: '0.07em',
+                }}>
+                  <span style={{
+                    width: 18, height: 18, borderRadius: '50%',
+                    background: color, color: '#fff', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justify-content: 'center',
+                    fontSize: '0.56rem', fontWeight: 900,
+                  }}>
+                    {label}
+                  </span>
+                  {typeLabel}
+                </div>
+
+                {/* Popup body */}
+                <div style={{
+                  fontSize: '0.81rem', color: 'var(--text-primary)',
+                  lineHeight: 1.55, wordBreak: 'break-word',
+                }}>
+                  {text
+                    ? text
+                    : <em style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No description provided.</em>
+                  }
+                </div>
+
+                {/* Close link */}
+                <button
+                  onClick={() => setOpenKey(null)}
+                  style={{
+                    marginTop: 9, fontSize: '0.66rem', color: 'var(--text-muted)',
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACTION / REFERENCE / SAFETY CRITICAL NODE
+   Layout: [WI badge][card body] ── line ── [P1]
+                                  ── line ── [P2]
+                                  ── line ── [S1]
+   ═══════════════════════════════════════════════════════════════════════════ */
+function ActionNode({ step }) {
+  const hasWI    = !!step.refCode;
+  const isRef    = step.stepType === 'reference';
+  const isSafety = step.stepType === 'safety_critical';
+  const border   = isSafety ? '#dc2626' : isRef ? '#818cf8' : '#0d9488';
+  const bgCard   = isSafety ? 'rgba(220,38,38,0.08)' : 'var(--bg-card)';
+
+  const hasBadges = (step.attentionPoints?.length || 0) + (step.safetyPoints?.length || 0) > 0;
+
+  return (
+    /* Outer row: card column + badge column */
     <div
       className="flowchart-step-card-hover"
       style={{
-        display: 'flex', alignItems: 'stretch',
-        width: '100%', maxWidth: 460, margin: '0 auto',
-        borderRadius: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: hasBadges ? 560 : 480,
+        margin: '0 auto',
         transition: 'all 0.2s ease',
       }}
     >
-      {/* WI badge fused on left */}
-      {hasWI && <WIBadge code={step.refCode} />}
-
-      {/* Card */}
+      {/* ── Left: card (with optional safety banner on top) ── */}
       <div style={{
         flex: 1,
-        background: 'var(--bg-card)',
-        border: `2.5px solid ${border}`,
-        borderRadius: hasWI ? '0 8px 8px 0' : '8px',
-        padding: '14px 24px',
-        textAlign: 'center',
-        fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.45,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        minWidth: 0,
       }}>
-        {isRef && '📎 '}{step.title}
-        {step.body && (
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 5, fontWeight: 400 }}>
-            {step.body}
+        {/* Safety Critical banner */}
+        {isSafety && (
+          <div style={{
+            background: '#dc2626',
+            padding: '5px 16px',
+            display: 'flex', alignItems: 'center', gap: 7,
+            fontSize: '0.68rem', fontWeight: 800, color: '#fff',
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+          }}>
+            <span>⚠</span> Safety Critical Action
           </div>
         )}
+
+        {/* WI badge + card body row */}
+        <div style={{ display: 'flex', alignItems: 'stretch' }}>
+          {hasWI && (
+            <WIBadge
+              code={step.refCode}
+              radius={isSafety ? '0' : '6px 0 0 6px'}
+            />
+          )}
+          <div style={{
+            flex: 1,
+            background: bgCard,
+            border: `2.5px solid ${border}`,
+            borderRadius: isSafety
+              ? (hasWI ? '0 0 8px 0'  : '0 0 8px 8px')
+              : (hasWI ? '0 8px 8px 0' : '8px'),
+            padding: '14px 24px',
+            textAlign: 'center',
+            fontSize: '0.92rem', fontWeight: 600,
+            color: 'var(--text-primary)', lineHeight: 1.45,
+            boxShadow: isSafety
+              ? '0 4px 16px rgba(220,38,38,0.25)'
+              : '0 4px 12px rgba(0,0,0,0.15)',
+          }}>
+            {isRef && '📎 '}{step.title}
+            {step.body && (
+              <div style={{
+                fontSize: '0.78rem', color: 'var(--text-muted)',
+                marginTop: 5, fontWeight: 400,
+              }}>
+                {step.body}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* ── Right: badge column (only if badges exist) ── */}
+      {hasBadges && <BadgeColumn step={step} />}
     </div>
   );
 }
@@ -122,7 +331,7 @@ function BranchStep({ step, idx, isLast, borderColor }) {
           <div style={{
             width: 22, height: 22, borderRadius: '50%',
             background: 'var(--bg-hover)', border: '1.5px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex', alignItems: 'center', justify-content: 'center',
             fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)',
             flexShrink: 0, alignSelf: 'center', marginRight: 8,
           }}>{String.fromCharCode(65 + idx)}</div>
@@ -147,7 +356,7 @@ function BranchStep({ step, idx, isLast, borderColor }) {
 
       {/* Tiny connector between sub-steps */}
       {!isLast && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '3px 0' }}>
+        <div style={{ display: 'flex', justify-content: 'center', padding: '3px 0' }}>
           <div style={{ width: 1.5, height: 10, background: 'var(--border)' }} />
         </div>
       )}
@@ -238,7 +447,7 @@ function DecisionBlock({ step, uid }) {
           <foreignObject x={textX} y={textY} width={textW} height={textH}>
             <div style={{
               width: '100%', height: '100%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              display: 'flex', alignItems: 'center', justify-content: 'center',
               fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)',
               textAlign: 'center', lineHeight: 1.35,
               padding: '0 6px', wordBreak: 'break-word',
@@ -277,7 +486,7 @@ function DecisionBlock({ step, uid }) {
               fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
+              justify-content: 'center',
               height: '100%',
               userSelect: 'none',
             }}>
@@ -296,7 +505,7 @@ function DecisionBlock({ step, uid }) {
               fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
+              justify-content: 'center',
               height: '100%',
               userSelect: 'none',
             }}>
@@ -322,7 +531,7 @@ function DecisionBlock({ step, uid }) {
                         color: '#22c55e', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.06em' }}>
             <CheckCircle size={13} /> YES PATH
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 8 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justify-content: 'flex-start', gap: 8 }}>
             {yes.length === 0
               ? <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '6px 0' }}>No steps defined</div>
               : yes.map((bs, i) => <BranchStep key={i} step={bs} idx={i} isLast={i === yes.length - 1} borderColor="rgba(34,197,94,0.25)" />)
@@ -341,7 +550,7 @@ function DecisionBlock({ step, uid }) {
                         color: '#ef4444', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.06em' }}>
             <XCircle size={13} /> NO PATH
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 8 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justify-content: 'flex-start', gap: 8 }}>
             {no.length === 0
               ? <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '6px 0' }}>No steps defined</div>
               : no.map((bs, i) => <BranchStep key={i} step={bs} idx={i} isLast={i === no.length - 1} borderColor="rgba(239,68,68,0.25)" />)
@@ -391,7 +600,7 @@ function FlowchartViewer({ steps }) {
       border: '1px solid var(--border)',
       borderRadius: 20, padding: '36px 24px',
       boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-      overflowX: 'auto',
+      overflow: 'visible',   /* allow badge popups to float outside without scrollbar */
     }}>
       <div style={{
         display: 'flex',
@@ -413,7 +622,7 @@ function FlowchartViewer({ steps }) {
                     drew its own merge-connector with arrowhead at the bottom)
               */}
               {idx > 0 && !prevIsDecision && (
-                <VLine lineH={30} />
+                <VLine lineH={30} color={step.stepType === 'safety_critical' ? 'rgba(220,38,38,0.5)' : '#4b5563'} />
               )}
 
               {isDecision
@@ -494,7 +703,7 @@ export default function SOPViewPage() {
         <button onClick={() => navigate(-1)} style={{
           background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
           borderRadius: '50%', width: 36, height: 36,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justify-content: 'center', color: '#fff', cursor: 'pointer',
         }}>
           <ArrowLeft size={16} />
         </button>

@@ -59,7 +59,11 @@ async function getById(id) {
 
   // Delete versions relation and assign steps to match the expected format
   delete sop.versions;
-  sop.steps = steps;
+  sop.steps = steps.map(st => ({
+    ...st,
+    attentionPoints: st.attentionPoints ? JSON.parse(st.attentionPoints) : [],
+    safetyPoints:    st.safetyPoints    ? JSON.parse(st.safetyPoints)    : [],
+  }));
 
   return sop;
 }
@@ -103,6 +107,8 @@ async function create({ title, referenceCode, categoryId, ownerId, docType, tags
         refCode: s.refCode,
         sortOrder: i,
         branchData: s.branchData || null,
+        attentionPoints: s.attentionPoints?.length ? JSON.stringify(s.attentionPoints) : null,
+        safetyPoints:    s.safetyPoints?.length    ? JSON.stringify(s.safetyPoints)    : null,
       })),
     });
   }
@@ -150,6 +156,8 @@ async function update(id, { title, categoryId, ownerId, docType, tags, steps, co
         refCode: s.refCode,
         sortOrder: i,
         branchData: s.branchData || null,
+        attentionPoints: s.attentionPoints?.length ? JSON.stringify(s.attentionPoints) : null,
+        safetyPoints:    s.safetyPoints?.length    ? JSON.stringify(s.safetyPoints)    : null,
       })),
     });
   }

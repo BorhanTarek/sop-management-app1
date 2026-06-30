@@ -1,16 +1,205 @@
-import { Plus, Trash2, ArrowUp, ArrowDown, CheckCircle, XCircle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Plus, Trash2, ArrowUp, ArrowDown, CheckCircle, XCircle, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
 
 // ─── Step type metadata ────────────────────────────────────────────────
-const STEP_TYPES = ['action', 'decision', 'reference'];
+const STEP_TYPES = ['action', 'safety_critical', 'decision', 'reference'];
 const STEP_META = {
-  action:    { label: 'Action',    icon: '▬', color: '#1a9e96', borderColor: 'var(--brand-primary)' },
-  decision:  { label: 'Decision',  icon: '◇', color: '#f59e0b', borderColor: '#f59e0b' },
-  reference: { label: 'Reference', icon: '📎', color: '#818cf8', borderColor: '#818cf8' },
+  action:          { label: 'Action',          icon: '▬',  color: '#1a9e96' },
+  safety_critical: { label: 'Safety Critical', icon: '⚠',  color: '#dc2626' },
+  decision:        { label: 'Decision',        icon: '◇',  color: '#f59e0b' },
+  reference:       { label: 'Reference',       icon: '📎', color: '#818cf8' },
 };
 
+/* ══════════════════════════════════════════════════════════════════════
+   INTERACTIVE BADGE MANAGER
+   Each attentionPoint / safetyPoint is an object: { text: string }
+   Badges are auto-sequenced: P1, P2, P3 ... / S1, S2, S3 ...
+   Clicking a badge in ADMIN mode expands an inline text editor.
+   ══════════════════════════════════════════════════════════════════════ */
+function BadgeManager({ type, items, onChange }) {
+  // 'expanded' tracks which badge index is currently open (-1 = none)
+  const [expanded, setExpanded] = useState(-1);
+  const textareaRef = useRef(null);
+
+  const isAttention = type === 'attention';
+  const prefix      = isAttention ? 'P' : 'S';
+  const accentColor = isAttention ? '#16a34a' : '#dc2626';
+  const accentAlpha = isAttention ? 'rgba(22,163,74,' : 'rgba(220,38,38,';
+  const label       = isAttention ? 'Point of Attention' : 'Safety Point';
+
+  const addBadge = () => {
+    const next = [...(items || []), { text: '' }];
+    onChange(next);
+    // Auto-open the new badge's editor
+    setExpanded(next.length - 1);
+  };
+
+  const removeBadge = (idx) => {
+    const next = (items || []).filter((_, i) => i !== idx);
+    onChange(next);
+    setExpanded(e => (e >= next.length ? next.length - 1 : e));
+  };
+
+  const updateText = (idx, text) => {
+    const next = (items || []).map((b, i) => i === idx ? { ...b, text } : b);
+    onChange(next);
+  };
+
+  const toggleExpand = (idx) => {
+    setExpanded(e => (e === idx ? -1 : idx));
+  };
+
+  // Auto-focus textarea when a badge is expanded
+  useEffect(() => {
+    if (expanded >= 0 && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [expanded]);
+
+  const list = items || [];
+
+  return (
+    <div className="badge-manager">
+      {/* Header row: label + Add button */}
+      <div className="badge-manager-header">
+        <span className="badge-manager-title" style={{ color: accentColor }}>
+          {label}
+          {list.length > 0 && (
+            <span className="badge-manager-count">{list.length}</span>
+          )}
+        </span>
+        <button
+          type="button"
+          className="badge-manager-add"
+          style={{ color: accentColor, borderColor: `${accentAlpha}0.4)` }}
+          onClick={addBadge}
+          title={`Add ${label}`}
+        >
+          <Plus size={10} />
+          Add {prefix}
+        </button>
+      </div>
+
+      {/* Badge list */}
+      {list.length > 0 && (
+        <div className="badge-manager-list">
+          {list.map((badge, idx) => {
+            const isOpen = expanded === idx;
+            const badgeLabel = `${prefix}${idx + 1}`;
+
+            return (
+              <div key={idx} className={`badge-item${isOpen ? ' badge-item--open' : ''}`}>
+                {/* Badge pill row */}
+                <div className="badge-item-row">
+                  {/* Clickable pill */}
+                  <button
+                    type="button"
+                    className="badge-pill"
+                    style={{
+                      background: isOpen ? accentColor : `${accentAlpha}0.12)`,
+                      borderColor: accentColor,
+                      color: isOpen ? '#fff' : accentColor,
+                      boxShadow: isOpen ? `0 2px 10px ${accentAlpha}0.4)` : 'none',
+                    }}
+                    onClick={() => toggleExpand(idx)}
+                    title={isOpen ? `Collapse ${badgeLabel}` : `Edit ${badgeLabel}`}
+                  >
+                    {badgeLabel}
+                    {isOpen
+                      ? <ChevronUp size={9} style={{ marginLeft: 3 }} />
+                      : <ChevronDown size={9} style={{ marginLeft: 3 }} />
+                    }
+                  </button>
+
+                  {/* Text preview (collapsed) */}
+                  {!isOpen && badge.text && (
+                    <span className="badge-preview-text">
+                      {badge.text.length > 55 ? badge.text.slice(0, 55) + '…' : badge.text}
+                    </span>
+                  )}
+                  {!isOpen && !badge.text && (
+                    <span className="badge-preview-empty">Click to add description…</span>
+                  )}
+
+                  {/* Remove button */}
+                  <button
+                    type="button"
+                    className="badge-remove"
+                    onClick={() => removeBadge(idx)}
+                    title={`Remove ${badgeLabel}`}
+                  >
+                    <Trash2 size={10} />
+                  </button>
+                </div>
+
+                {/* Expandable text editor */}
+                {isOpen && (
+                  <div
+                    className="badge-editor"
+                    style={{
+                      borderColor: `${accentAlpha}0.35)`,
+                      background: `${accentAlpha}0.04)`,
+                    }}
+                  >
+                    <div className="badge-editor-label" style={{ color: accentColor }}>
+                      {badgeLabel} Description
+                    </div>
+                    <textarea
+                      ref={textareaRef}
+                      className="badge-editor-textarea"
+                      placeholder={`Describe what operators must do or observe for ${badgeLabel}…`}
+                      value={badge.text || ''}
+                      onChange={e => updateText(idx, e.target.value)}
+                      rows={3}
+                      style={{
+                        borderColor: `${accentAlpha}0.25)`,
+                      }}
+                    />
+                    <div className="badge-editor-footer">
+                      <span className="badge-char-count">
+                        {(badge.text || '').length} chars
+                      </span>
+                      <button
+                        type="button"
+                        className="badge-editor-done"
+                        style={{ color: accentColor, borderColor: `${accentAlpha}0.35)` }}
+                        onClick={() => setExpanded(-1)}
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   COMBINED SAFETY BADGE PANEL  (used in action + safety_critical steps)
+   ══════════════════════════════════════════════════════════════════════ */
+function SafetyBadgePanel({ attentionPoints, safetyPoints, onChange }) {
+  return (
+    <div className="safety-badge-panel">
+      <BadgeManager
+        type="attention"
+        items={attentionPoints || []}
+        onChange={items => onChange('attentionPoints', items)}
+      />
+      <BadgeManager
+        type="safety"
+        items={safetyPoints || []}
+        onChange={items => onChange('safetyPoints', items)}
+      />
+    </div>
+  );
+}
+
 // ─── WI Code badge input ───────────────────────────────────────────────
-// Renders the Work Instruction input with a teal badge prefix (like the flowchart image).
-// Used inside branch sub-steps for decision steps.
 function WICodeInput({ value, onChange, placeholder = 'RTM-D14' }) {
   return (
     <div className="wi-code-input-wrap">
@@ -26,7 +215,6 @@ function WICodeInput({ value, onChange, placeholder = 'RTM-D14' }) {
 }
 
 // ─── Sub-step row inside a Yes/No branch panel ─────────────────────────
-// Each branch sub-step has its OWN WI code — the WI code moves here for decision steps.
 function BranchStepRow({ step, idx, onChange, onRemove }) {
   return (
     <div className="branch-step-row">
@@ -45,7 +233,6 @@ function BranchStepRow({ step, idx, onChange, onRemove }) {
           onChange={e => onChange(idx, 'body', e.target.value)}
           style={{ marginTop: 5 }}
         />
-        {/* WI Code lives here, at the branch sub-step level */}
         <WICodeInput
           value={step.refCode}
           onChange={val => onChange(idx, 'refCode', val)}
@@ -95,17 +282,17 @@ function BranchPanel({ type, steps, onAddStep, onChangeStep, onRemoveStep }) {
 
 // ─── Main StepBuilder component ────────────────────────────────────────
 export default function StepBuilder({ steps, setSteps }) {
-  // ── helpers ──
   const newStep = (type = 'action') => ({
     id: Date.now() + Math.random(),
     title: '',
     body: '',
     stepType: type,
-    // Decision steps never carry a top-level refCode — WI codes live on their branch sub-steps
     refCode: '',
     sortOrder: steps.length,
     yesBranch: [],
     noBranch: [],
+    attentionPoints: [],
+    safetyPoints: [],
   });
 
   const addStep = (type) => setSteps(s => [...s, newStep(type)]);
@@ -131,13 +318,13 @@ export default function StepBuilder({ steps, setSteps }) {
             stepType: newType,
             yesBranch: st.yesBranch || [],
             noBranch: st.noBranch || [],
-            // Decision steps: clear the top-level WI refCode — it moves to each branch sub-step
             refCode: newType === 'decision' ? '' : st.refCode,
+            attentionPoints: st.attentionPoints || [],
+            safetyPoints: st.safetyPoints || [],
           }
         : st
     ));
 
-  // Branch helpers
   const addBranchStep = (stepIdx, branch) =>
     setSteps(s => s.map((st, i) => {
       if (i !== stepIdx) return st;
@@ -158,22 +345,21 @@ export default function StepBuilder({ steps, setSteps }) {
       return { ...st, [branch]: (st[branch] || []).filter((_, j) => j !== bi) };
     }));
 
-  // ── render ──
   return (
     <div className="step-builder">
       {steps.map((step, idx) => {
-        const meta      = STEP_META[step.stepType] || STEP_META.action;
+        const meta       = STEP_META[step.stepType] || STEP_META.action;
         const isDecision = step.stepType === 'decision';
+        const isSafety   = step.stepType === 'safety_critical';
 
         return (
           <div key={step.id ?? idx} className={`step-card step-card--${step.stepType}`}>
-            {/* Card header: number + type toggle + move/delete actions */}
+            {/* ── Card header ── */}
             <div className="step-card-header">
               <span className="step-card-num" style={{ background: meta.color }}>
-                {isDecision ? '◇' : idx + 1}
+                {isDecision ? '◇' : isSafety ? '⚠' : idx + 1}
               </span>
 
-              {/* Type toggle pills */}
               <div className="step-type-toggle">
                 {STEP_TYPES.map(t => {
                   const m = STEP_META[t];
@@ -197,7 +383,6 @@ export default function StepBuilder({ steps, setSteps }) {
                 })}
               </div>
 
-              {/* Move / delete */}
               <div className="step-card-actions">
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveStep(idx, -1)} title="Move up"><ArrowUp size={12} /></button>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveStep(idx, 1)} title="Move down"><ArrowDown size={12} /></button>
@@ -205,26 +390,11 @@ export default function StepBuilder({ steps, setSteps }) {
               </div>
             </div>
 
-            {/* Card body: main inputs */}
+            {/* ── Card body ── */}
             <div className="step-card-body">
               {isDecision ? (
-                /*
-                 * DECISION STEP
-                 * ─────────────────────────────────────────────────────────────
-                 * The top-level card only holds the QUESTION text.
-                 * There is NO WI refCode here — WI codes belong exclusively
-                 * to each individual sub-step inside the Yes / No branch panels.
-                 *
-                 * Data shape:
-                 *   { stepType: 'decision', title: '...', refCode: null,
-                 *     branchData: JSON.stringify({
-                 *       yesBranch: [{ title, body, refCode: 'WI-RTM-XXX' }],
-                 *       noBranch:  [{ title, body, refCode: 'WI-RTM-D14' }]
-                 *     })
-                 *   }
-                 */
+                /* ── DECISION ── */
                 <>
-                  {/* Decision question — no WI field */}
                   <div className="decision-question-row">
                     <span className="decision-diamond-icon">◇</span>
                     <div style={{ flex: 1 }}>
@@ -235,12 +405,10 @@ export default function StepBuilder({ steps, setSteps }) {
                         onChange={e => updateStep(idx, 'title', e.target.value)}
                       />
                       <div className="decision-wi-notice">
-                        ℹ️ Work Instruction codes are assigned per branch sub-step below — not on the decision question itself
+                        ℹ️ Work Instruction codes are assigned per branch sub-step below
                       </div>
                     </div>
                   </div>
-
-                  {/* Yes / No branch panels — each sub-step has its own WI code */}
                   <div className="decision-branches">
                     <BranchPanel
                       type="yes"
@@ -258,15 +426,41 @@ export default function StepBuilder({ steps, setSteps }) {
                     />
                   </div>
                 </>
+              ) : isSafety ? (
+                /* ── SAFETY CRITICAL ── */
+                <>
+                  <div className="safety-critical-banner">
+                    <ShieldAlert size={16} />
+                    <span>SAFETY CRITICAL ACTION — Failure to comply may cause injury or system damage</span>
+                  </div>
+                  <div className="action-step-main-row">
+                    <input
+                      className="form-control"
+                      placeholder="Safety critical step title *"
+                      value={step.title}
+                      onChange={e => updateStep(idx, 'title', e.target.value)}
+                    />
+                    <WICodeInput
+                      value={step.refCode}
+                      onChange={val => updateStep(idx, 'refCode', val)}
+                      placeholder="RTM-H11 (optional)"
+                    />
+                  </div>
+                  <input
+                    className="form-control"
+                    placeholder="Description / consequence (optional)"
+                    value={step.body || ''}
+                    onChange={e => updateStep(idx, 'body', e.target.value)}
+                    style={{ marginTop: 8 }}
+                  />
+                  <SafetyBadgePanel
+                    attentionPoints={step.attentionPoints || []}
+                    safetyPoints={step.safetyPoints || []}
+                    onChange={(key, val) => updateStep(idx, key, val)}
+                  />
+                </>
               ) : (
-                /*
-                 * ACTION / REFERENCE STEP
-                 * ─────────────────────────────────────────────────────────────
-                 * WI refCode is attached directly to this step card.
-                 *
-                 * Data shape:
-                 *   { stepType: 'action', title: '...', refCode: 'WI-RTM-H11', body: '...' }
-                 */
+                /* ── ACTION / REFERENCE ── */
                 <>
                   <div className="action-step-main-row">
                     <input
@@ -275,7 +469,6 @@ export default function StepBuilder({ steps, setSteps }) {
                       value={step.title}
                       onChange={e => updateStep(idx, 'title', e.target.value)}
                     />
-                    {/* WI Code directly on the step card for action/reference steps */}
                     <WICodeInput
                       value={step.refCode}
                       onChange={val => updateStep(idx, 'refCode', val)}
@@ -289,6 +482,11 @@ export default function StepBuilder({ steps, setSteps }) {
                     onChange={e => updateStep(idx, 'body', e.target.value)}
                     style={{ marginTop: 8 }}
                   />
+                  <SafetyBadgePanel
+                    attentionPoints={step.attentionPoints || []}
+                    safetyPoints={step.safetyPoints || []}
+                    onChange={(key, val) => updateStep(idx, key, val)}
+                  />
                 </>
               )}
             </div>
@@ -296,10 +494,13 @@ export default function StepBuilder({ steps, setSteps }) {
         );
       })}
 
-      {/* Add step buttons */}
+      {/* ── Add step buttons ── */}
       <div className="step-add-row">
         <button type="button" className="btn btn-secondary" onClick={() => addStep('action')}>
           <Plus size={13} /> Action Step
+        </button>
+        <button type="button" className="btn btn-secondary step-add-btn--safety" onClick={() => addStep('safety_critical')}>
+          <Plus size={13} /> ⚠ Safety Critical
         </button>
         <button type="button" className="btn btn-secondary step-add-btn--decision" onClick={() => addStep('decision')}>
           <Plus size={13} /> ◇ Decision

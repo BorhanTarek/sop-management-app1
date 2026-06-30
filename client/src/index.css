@@ -374,10 +374,12 @@ td .cell-primary { color: var(--text-primary); font-weight: 500; }
   overflow: hidden;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
-.step-card--action    { border-left-color: var(--brand-primary); }
-.step-card--decision  { border-left-color: #f59e0b; background: rgba(245,158,11,0.03); }
-.step-card--reference { border-left-color: #818cf8; background: rgba(129,140,248,0.03); }
+.step-card--action          { border-left-color: var(--brand-primary); }
+.step-card--safety_critical { border-left-color: #dc2626; background: rgba(220,38,38,0.04); }
+.step-card--decision        { border-left-color: #f59e0b; background: rgba(245,158,11,0.03); }
+.step-card--reference       { border-left-color: #818cf8; background: rgba(129,140,248,0.03); }
 .step-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+.step-card--safety_critical:hover { box-shadow: 0 2px 16px rgba(220,38,38,0.2); border-color: #dc2626; }
 .step-card--decision:hover  { border-color: #f59e0b; }
 .step-card--reference:hover { border-color: #818cf8; }
 
@@ -525,8 +527,6 @@ td .cell-primary { color: var(--text-primary); font-weight: 500; }
   line-height: 1.4;
 }
 
-
-
 .branch-panel-steps { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
 
 /* Row for a single sub-step inside a branch */
@@ -575,10 +575,219 @@ td .cell-primary { color: var(--text-primary); font-weight: 500; }
 
 /* Add step row at the bottom of builder */
 .step-add-row { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.step-add-btn--safety    { color: #dc2626 !important; border-color: rgba(220,38,38,0.4) !important; }
 .step-add-btn--decision  { color: #f59e0b !important; border-color: rgba(245,158,11,0.4) !important; }
 .step-add-btn--reference { color: #818cf8 !important; border-color: rgba(129,140,248,0.4) !important; }
+.step-add-btn--safety:hover    { background: rgba(220,38,38,0.08) !important; border-color: #dc2626 !important; }
 .step-add-btn--decision:hover  { background: rgba(245,158,11,0.08) !important; border-color: #f59e0b !important; }
 .step-add-btn--reference:hover { background: rgba(129,140,248,0.08) !important; border-color: #818cf8 !important; }
+
+/* ─── Safety Critical banner (inside step card body) ────── */
+.safety-critical-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(220,38,38,0.12);
+  border: 1px solid rgba(220,38,38,0.35);
+  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  margin-bottom: 10px;
+  color: #f87171;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.safety-critical-banner svg { flex-shrink: 0; color: #ef4444; }
+
+/* ─── Safety Badge Panel (wraps both BadgeManagers) ─────── */
+.safety-badge-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+/* ─── BadgeManager ──────────────────────────────────────── */
+.badge-manager {}
+
+.badge-manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.badge-manager-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.badge-manager-count {
+  background: currentColor;
+  color: var(--bg-base);
+  border-radius: 99px;
+  font-size: 0.58rem;
+  font-weight: 900;
+  width: 16px; height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
+}
+.badge-manager-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 99px;
+  border: 1.5px solid;
+  background: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  opacity: 0.75;
+}
+.badge-manager-add:hover { opacity: 1; background: rgba(255,255,255,0.05); }
+
+/* ─── Badge item list ───────────────────────────────────── */
+.badge-manager-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.badge-item {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: all var(--transition);
+}
+
+/* ─── Badge item row (pill + preview + delete) ──────────── */
+.badge-item-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 0;
+}
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  height: 24px;
+  border-radius: 99px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  border: 2px solid;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.badge-pill:hover { opacity: 0.9; transform: scale(1.05); }
+
+.badge-preview-text {
+  flex: 1;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+}
+.badge-preview-empty {
+  flex: 1;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-style: italic;
+  opacity: 0.55;
+  cursor: default;
+}
+.badge-remove {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition);
+  opacity: 0;
+}
+.badge-item-row:hover .badge-remove { opacity: 1; }
+.badge-remove:hover { color: var(--danger); border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); }
+
+/* ─── Inline editor that expands below the pill row ─────── */
+.badge-editor {
+  border: 1.5px solid;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-top: 5px;
+  animation: badgeEditorIn 0.15s ease;
+}
+@keyframes badgeEditorIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.badge-editor-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+  opacity: 0.85;
+}
+.badge-editor-textarea {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1.5px solid;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  padding: 8px 10px;
+  resize: vertical;
+  min-height: 64px;
+  outline: none;
+  transition: border-color var(--transition);
+}
+.badge-editor-textarea:focus { border-color: var(--brand-primary); }
+.badge-editor-textarea::placeholder { color: var(--text-muted); }
+.badge-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.badge-char-count {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+}
+.badge-editor-done {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  border: 1.5px solid;
+  background: none;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.badge-editor-done:hover { background: rgba(255,255,255,0.06); }
+
+/* ─── Viewer badge popup animation ─────────────────────── */
+@keyframes badgePop {
+  from { opacity: 0; transform: scale(0.88) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 
 /* Legacy step-item / step-num kept for any other uses */
 .step-item {

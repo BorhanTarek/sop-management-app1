@@ -7,17 +7,14 @@ import StepBuilder from '../../components/sop/StepBuilder';
 
 const DOC_TYPES = ['SOP', 'Safety Notice', 'Work Instruction'];
 
-/* StepBuilder is imported from ../../components/sop/StepBuilder */
-
 /* ── Category / Sub-category Selector ───────────────── */
 function CategorySelector({ tree, categoryId, onChange }) {
-  // Find which root category contains the current selection
   const findRoot = (nodes, targetId) => {
     for (const node of nodes) {
       if (node.id === targetId) return node.parentId ? null : node.id;
       if (node.children?.length) {
         const found = findRoot(node.children, targetId);
-        if (found !== undefined) return node.id; // this root contains it
+        if (found !== undefined) return node.id;
       }
     }
     return undefined;
@@ -34,13 +31,12 @@ function CategorySelector({ tree, categoryId, onChange }) {
     categoryId && categoryId !== initialRoot ? categoryId : ''
   );
 
-  const rootCategories = tree; // top-level only
+  const rootCategories = tree;
   const subCategories  = tree.find(r => r.id === selectedRoot)?.children || [];
 
   const handleRootChange = (rootId) => {
     setSelectedRoot(rootId);
     setSelectedSub('');
-    // If root has no children, use root as the categoryId
     const root = tree.find(r => r.id === rootId);
     const kids = root?.children || [];
     onChange(kids.length === 0 ? rootId : '');
@@ -53,7 +49,6 @@ function CategorySelector({ tree, categoryId, onChange }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {/* Row 1: Category */}
       <div className="form-group" style={{ marginBottom: 0 }}>
         <label className="form-label">Category</label>
         <select
@@ -70,7 +65,6 @@ function CategorySelector({ tree, categoryId, onChange }) {
         </select>
       </div>
 
-      {/* Row 2: Sub-Category (only shown if root has children) */}
       {selectedRoot && subCategories.length > 0 && (
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -93,7 +87,6 @@ function CategorySelector({ tree, categoryId, onChange }) {
         </div>
       )}
 
-      {/* Breadcrumb display */}
       {selectedRoot && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
           <span style={{ color: 'var(--brand-accent)' }}>
@@ -117,7 +110,7 @@ function CategorySelector({ tree, categoryId, onChange }) {
 export default function SOPCreatePage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [tree, setTree]   = useState([]);   // raw tree (with children)
+  const [tree, setTree]   = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState('');
@@ -136,7 +129,6 @@ export default function SOPCreatePage() {
 
   const setField = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
-  // Resolve display label for selected category
   const resolveLabel = () => {
     if (!form.categoryId) return null;
     const flat = [];
@@ -145,19 +137,17 @@ export default function SOPCreatePage() {
     return flat.find(c => c.id === form.categoryId)?.name;
   };
 
-  // Serialize branch arrays to JSON string before sending to API.
-  // KEY RULE: Decision steps never have a top-level refCode — WI codes live
-  // on each individual branch sub-step inside yesBranch / noBranch.
   const prepareStepsForAPI = (rawSteps) =>
     rawSteps
       .filter(s => s.title?.trim())
       .map(s => ({
         ...s,
-        // Decision steps: WI code is null at the question level — it's inside branchData sub-steps
         refCode: s.stepType === 'decision' ? null : (s.refCode || null),
         branchData: s.stepType === 'decision'
           ? JSON.stringify({ yesBranch: s.yesBranch || [], noBranch: s.noBranch || [] })
           : null,
+        attentionPoints: s.attentionPoints || [],
+        safetyPoints: s.safetyPoints || [],
       }));
 
   const submit = async (e) => {
@@ -199,8 +189,6 @@ export default function SOPCreatePage() {
 
       <form id="sop-form" onSubmit={submit}>
         <div className="grid-2" style={{ marginBottom: 20 }}>
-
-          {/* ── Left: Document Info ── */}
           <div className="card">
             <h3 style={{ marginBottom: 16 }}>Document Info</h3>
 
@@ -227,7 +215,6 @@ export default function SOPCreatePage() {
               </div>
             </div>
 
-            {/* ── Category + Sub-Category ── */}
             <CategorySelector
               tree={tree}
               categoryId={form.categoryId}
@@ -251,7 +238,6 @@ export default function SOPCreatePage() {
             </div>
           </div>
 
-          {/* ── Right: Preview ── */}
           <div className="card">
             <h3 style={{ marginBottom: 16 }}>Preview</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -281,7 +267,6 @@ export default function SOPCreatePage() {
           </div>
         </div>
 
-        {/* ── Steps Builder ── */}
         <div className="card">
           <div className="card-header">
             <h3>Procedure Steps</h3>

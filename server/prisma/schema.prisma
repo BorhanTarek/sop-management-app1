@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -125,17 +125,19 @@ model ChangeLog {
 }
 
 model SopStep {
-  id           String   @id @default(uuid())
-  sopId        String
-  versionId    String?
-  stepNumber   Int
-  title        String?
-  body         String?
-  stepType     String   @default("action")
-  refCode      String?
-  parentStepId String?
-  sortOrder    Int      @default(0)
-  branchData   String?  // JSON: { yesBranch:[...], noBranch:[...] } for decision steps
+  id              String   @id @default(uuid())
+  sopId           String
+  versionId       String?
+  stepNumber      Int
+  title           String?
+  body            String?
+  stepType        String   @default("action")  // action | safety_critical | decision | reference
+  refCode         String?
+  parentStepId    String?
+  sortOrder       Int      @default(0)
+  branchData      String?  // JSON: { yesBranch:[...], noBranch:[...] } for decision steps
+  attentionPoints String?  // JSON array of ints e.g. [1,2] for P badges
+  safetyPoints    String?  // JSON array of ints e.g. [1] for S badges
 
   sop       Sop         @relation(fields: [sopId], references: [id], onDelete: Cascade)
   version   SopVersion? @relation(fields: [versionId], references: [id])

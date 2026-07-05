@@ -61,3 +61,20 @@ export const safetyNoticeService = {
   logs: (id) => api.get(`/safety-notices/${id}/logs`),
 };
 
+export const getImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+  
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  
+  if (url.startsWith('/api/uploads/')) {
+    return `${cleanBase}/uploads/${url.substring(13)}`;
+  }
+  if (url.startsWith('/uploads/')) {
+    return `${cleanBase}/uploads/${url.substring(9)}`;
+  }
+  
+  return `${cleanBase}${url}`;
+};
+

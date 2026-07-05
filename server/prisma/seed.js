@@ -70,6 +70,30 @@ async function main() {
     });
   }
   console.log(`${LINE3_STATIONS.length} Cairo Line 3 stations seeded`);
+
+  console.log('Seeding default admin user...');
+  const bcrypt = require('bcryptjs');
+  const adminEmail = 'admin';
+  const adminPassword = '123123';
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
+
+  const adminRole = await prisma.role.findUnique({ where: { name: 'admin' } });
+
+  await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: { passwordHash: adminPasswordHash },
+    create: {
+      email: adminEmail,
+      passwordHash: adminPasswordHash,
+      fullName: 'System Administrator',
+      roles: {
+        create: {
+          roleId: adminRole.id
+        }
+      }
+    }
+  });
+  console.log(`Default admin user seeded: ${adminEmail} (password: ${adminPassword})`);
 }
 
 main()

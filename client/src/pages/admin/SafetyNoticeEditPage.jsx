@@ -15,6 +15,8 @@ export default function SafetyNoticeEditPage() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [existingImageUrl, setExistingImageUrl] = useState('');
+  const [attachmentType, setAttachmentType] = useState('upload'); // 'upload' | 'url'
+  const [imageUrlLink, setImageUrlLink] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -31,6 +33,10 @@ export default function SafetyNoticeEditPage() {
         if (wi.imageUrl) {
           setExistingImageUrl(wi.imageUrl);
           setImagePreview(wi.imageUrl);
+          if (wi.imageUrl.startsWith('http://') || wi.imageUrl.startsWith('https://')) {
+            setAttachmentType('url');
+            setImageUrlLink(wi.imageUrl);
+          }
         }
       })
       .catch(err => {
@@ -97,10 +103,14 @@ export default function SafetyNoticeEditPage() {
       formData.append('isPublished', form.isPublished);
       formData.append('permittedRoles', JSON.stringify(form.permittedRoles));
       
-      if (imageFile) {
-        formData.append('image', imageFile);
-      } else if (!existingImageUrl && !imagePreview) {
-        formData.append('image', ''); 
+      if (attachmentType === 'upload') {
+        if (imageFile) {
+          formData.append('image', imageFile);
+        } else if (!existingImageUrl && !imagePreview) {
+          formData.append('image', ''); 
+        }
+      } else if (attachmentType === 'url') {
+        formData.append('imageUrlLink', imageUrlLink.trim());
       }
 
       await safetyNoticeService.update(id, formData);
@@ -218,68 +228,117 @@ export default function SafetyNoticeEditPage() {
           <div className="card">
             <h3 style={{ marginBottom: 12 }}>File Attachment / Illustration</h3>
             
-            {imagePreview ? (
-              <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                {isPdf ? (
-                  <iframe 
-                    src={getImageUrl(imagePreview)} 
-                    title="PDF Attachment Preview" 
-                    style={{ width: '100%', height: 240, border: 'none', background: '#0a0b0d' }}
-                  />
-                ) : (
-                  <img 
-                    src={getImageUrl(imagePreview)} 
-                    alt="Selected Preview" 
-                    style={{ width: '100%', maxHeight: 220, objectFit: 'contain', background: '#0a0b0d' }} 
-                  />
-                )}
-                <button 
-                  type="button" 
-                  onClick={removeImage}
-                  style={{
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    background: 'rgba(239, 68, 68, 0.85)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: 26,
-                    height: 26,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                    zIndex: 10
-                  }}
-                  title="Remove File"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <div 
-                onClick={() => fileInputRef.current?.click()}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14, borderBottom: '1px solid var(--border)', paddingBottom: 10 }}>
+              <button
+                type="button"
+                onClick={() => setAttachmentType('upload')}
                 style={{
-                  border: '2px dashed var(--border)',
-                  borderRadius: 10,
-                  padding: '36px 20px',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  background: 'var(--bg-input)',
-                  transition: 'border-color 0.15s ease',
+                  padding: '4px 12px',
+                  borderRadius: 6,
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  background: attachmentType === 'upload' ? 'var(--brand-primary)' : 'transparent',
+                  color: attachmentType === 'upload' ? '#fff' : 'var(--text-muted)',
+                  cursor: 'pointer'
                 }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--brand-primary)'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
               >
-                <Upload size={24} style={{ color: 'var(--text-muted)', marginBottom: 8 }} />
-                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Upload Safety Notice Image or PDF
+                Upload File
+              </button>
+              <button
+                type="button"
+                onClick={() => setAttachmentType('url')}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: 6,
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  background: attachmentType === 'url' ? 'var(--brand-primary)' : 'transparent',
+                  color: attachmentType === 'url' ? '#fff' : 'var(--text-muted)',
+                  cursor: 'pointer'
+                }}
+              >
+                Paste URL Link
+              </button>
+            </div>
+
+            {attachmentType === 'upload' ? (
+              imagePreview ? (
+                <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  {isPdf ? (
+                    <iframe 
+                      src={getImageUrl(imagePreview)} 
+                      title="PDF Attachment Preview" 
+                      style={{ width: '100%', height: 240, border: 'none', background: '#0a0b0d' }}
+                    />
+                  ) : (
+                    <img 
+                      src={getImageUrl(imagePreview)} 
+                      alt="Selected Preview" 
+                      style={{ width: '100%', maxHeight: 220, objectFit: 'contain', background: '#0a0b0d' }} 
+                    />
+                  )}
+                  <button 
+                    type="button" 
+                    onClick={removeImage}
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      background: 'rgba(239, 68, 68, 0.85)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: 26,
+                      height: 26,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                      zIndex: 10
+                    }}
+                    title="Remove File"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                  PNG, JPG, JPEG, GIF or PDF up to 5MB
+              ) : (
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    border: '2px dashed var(--border)',
+                    borderRadius: 10,
+                    padding: '36px 20px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    background: 'var(--bg-input)',
+                    transition: 'border-color 0.15s ease',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--brand-primary)'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                >
+                  <Upload size={24} style={{ color: 'var(--text-muted)', marginBottom: 8 }} />
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Upload Safety Notice Image or PDF
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                    PNG, JPG, JPEG, GIF or PDF up to 5MB
+                  </div>
                 </div>
+              )
+            ) : (
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.75rem' }}>Image or PDF Link URL</label>
+                <input
+                  type="url"
+                  className="form-control"
+                  placeholder="e.g. https://imgur.com/myimage.png"
+                  value={imageUrlLink}
+                  onChange={e => setImageUrlLink(e.target.value)}
+                />
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 6, display: 'block', lineHeight: 1.4 }}>
+                  Paste a direct link to an image or PDF. This is hosted permanently on the cloud and does not rely on local storage.
+                </span>
               </div>
             )}
             

@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -148,6 +148,7 @@ model SopStep {
   branchData      String?  // JSON: { yesBranch:[...], noBranch:[...] } for decision steps
   attentionPoints String?  // JSON array of ints e.g. [1,2] for P badges
   safetyPoints    String?  // JSON array of ints e.g. [1] for S badges
+  formConfig      String?  // JSON configuration for form steps
 
   sop       Sop         @relation(fields: [sopId], references: [id], onDelete: Cascade)
   version   SopVersion? @relation(fields: [versionId], references: [id])
@@ -242,6 +243,7 @@ model SopSessionStep {
   stepType      String?  // action | safety_critical | decision | reference
   acknowledgedAt DateTime @default(now())
   branchChoice  String?  // "yes" | "no" for decision steps
+  formResponses String?  // JSON responses for form steps
 
   session       SopSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 

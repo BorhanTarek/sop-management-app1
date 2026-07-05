@@ -12,6 +12,7 @@ export default function SOPsPage() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ search: '', status: '', docType: '' });
 
+
   const load = () => {
     setLoading(true);
     sopService.list(filters).then(r => setData(r.data)).finally(() => setLoading(false));
@@ -87,6 +88,7 @@ export default function SOPsPage() {
                         <div style={{ display: 'flex', gap: 3 }}>
                           <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/sop/${sop.id}`)} title="View"><Eye size={13} /></button>
                           <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/admin/sops/${sop.id}/edit`)} title="Edit"><Edit size={13} /></button>
+
                           {sop.status === 'draft'     && <button className="btn btn-ghost btn-sm" onClick={() => doAction('publish', sop.id)} title="Publish" style={{ color: 'var(--success)' }}><Send size={13} /></button>}
                           {sop.status === 'published' && <button className="btn btn-ghost btn-sm" onClick={() => doAction('archive', sop.id)} title="Archive" style={{ color: 'var(--warning)' }}><Archive size={13} /></button>}
                           {sop.status === 'archived'  && <button className="btn btn-ghost btn-sm" onClick={() => doAction('restore', sop.id)} title="Restore" style={{ color: 'var(--info)' }}><RotateCcw size={13} /></button>}
@@ -100,6 +102,9 @@ export default function SOPsPage() {
           </table>
         </div>
       </div>
+
+
     </div>
   );
 }
+

@@ -5,6 +5,7 @@ import { sopService, categoryService, userService } from '../../services/service
 import StepBuilder from '../../components/sop/StepBuilder';
 
 const DOC_TYPES = ['SOP', 'Safety Notice', 'Work Instruction'];
+const PERMITTED_ROLES = ['station_manager', 'station_master', 'transport_manager', 'driver', 'occ'];
 
 /* StepBuilder imported from ../../components/sop/StepBuilder */
 
@@ -157,7 +158,7 @@ export default function SOPEditPage() {
     ]).then(([sopRes, catRes, userRes]) => {
       const s = sopRes.data;
       setSop(s);
-      setForm({ title: s.title, referenceCode: s.referenceCode || '', categoryId: s.categoryId || '', ownerId: s.ownerId || '', docType: s.docType, tags: s.tags || '' });
+      setForm({ title: s.title, referenceCode: s.referenceCode || '', categoryId: s.categoryId || '', ownerId: s.ownerId || '', docType: s.docType, tags: s.tags || '', permittedRoles: s.permittedRoles || [] });
       // Parse branchData JSON back to yesBranch/noBranch arrays for the StepBuilder
       setSteps((s.steps || []).map((st, i) => {
         let yesBranch = [], noBranch = [];
@@ -179,6 +180,15 @@ export default function SOPEditPage() {
   }, [id]);
 
   const setField = (key, val) => setForm(f => ({ ...f, [key]: val }));
+
+  const togglePermittedRole = (role) => {
+    setForm(f => ({
+      ...f,
+      permittedRoles: f.permittedRoles.includes(role)
+        ? f.permittedRoles.filter(r => r !== role)
+        : [...f.permittedRoles, role],
+    }));
+  };
 
   // Serialize branch arrays to JSON before sending to API.
   // KEY RULE: Decision steps never have a top-level refCode — WI codes live
@@ -251,6 +261,27 @@ export default function SOPEditPage() {
             <div className="grid-2">
               <div className="form-group"><label className="form-label">Reference Code</label><input className="form-control" value={form.referenceCode} onChange={e => setField('referenceCode', e.target.value)} /></div>
               <div className="form-group"><label className="form-label">Type</label><select className="form-control" value={form.docType} onChange={e => setField('docType', e.target.value)}>{DOC_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Target Audience / Permitted Roles</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {PERMITTED_ROLES.map(r => (
+                  <button key={r} type="button"
+                    style={{
+                      padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
+                      border: `1.5px solid ${(form.permittedRoles || []).includes(r) ? 'var(--brand-accent)' : 'var(--border)'}`,
+                      background: (form.permittedRoles || []).includes(r) ? 'rgba(26,158,150,0.1)' : 'transparent',
+                      color: (form.permittedRoles || []).includes(r) ? 'var(--brand-accent)' : 'var(--text-muted)',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onClick={() => togglePermittedRole(r)}>
+                    {r.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 6 }}>
+                Select the roles that can view this procedure in the portal. Admin users can always view all SOPs.
+              </div>
             </div>
             <CategorySelector
                 tree={tree}

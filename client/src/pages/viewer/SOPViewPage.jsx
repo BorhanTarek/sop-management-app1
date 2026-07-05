@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, User, GitBranch, Edit, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Clock, User, GitBranch, Edit, CheckCircle, XCircle, ArrowRight, Play, Award, RotateCcw, AlertTriangle, ShieldAlert, FileText, Check } from 'lucide-react';
 import { sopService } from '../../services/services';
 import { useAuthStore } from '../../store/authStore';
+import { translations } from '../../utils/translations';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    FLOWCHART PRIMITIVES
@@ -589,7 +590,7 @@ function DecisionBlock({ step, uid }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FLOWCHART ORCHESTRATOR
+   FLOWCHART ORCHESTRATOR (Whole SOP rendering)
    ═══════════════════════════════════════════════════════════════════════════ */
 function FlowchartViewer({ steps }) {
   if (!steps || steps.length === 0) return null;
@@ -600,13 +601,13 @@ function FlowchartViewer({ steps }) {
       border: '1px solid var(--border)',
       borderRadius: 20, padding: '36px 24px',
       boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-      overflow: 'visible',   /* allow badge popups to float outside without scrollbar */
+      overflow: 'visible',
     }}>
       <div style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        minWidth: 550, // ensures the flowchart maintaining structure on mobile
+        minWidth: 550,
         margin: '0 auto',
       }}>
         {steps.map((step, idx) => {
@@ -615,12 +616,6 @@ function FlowchartViewer({ steps }) {
 
           return (
             <div key={step.id || idx} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              {/*
-                Draw a VLine BEFORE this step, UNLESS:
-                  • it's the first step (nothing above)
-                  • the previous step was a decision block (that block already
-                    drew its own merge-connector with arrowhead at the bottom)
-              */}
               {idx > 0 && !prevIsDecision && (
                 <VLine lineH={30} color={step.stepType === 'safety_critical' ? 'rgba(220,38,38,0.5)' : '#4b5563'} />
               )}
@@ -633,8 +628,6 @@ function FlowchartViewer({ steps }) {
           );
         })}
 
-        {/* ── Final Continue button ─────────────────────────────── */}
-        {/* If last step was NOT a decision, draw the exit arrow */}
         {steps[steps.length - 1]?.stepType !== 'decision' && (
           <VLine color="var(--brand-primary)" lineH={26} />
         )}
@@ -666,16 +659,37 @@ function FlowchartViewer({ steps }) {
   );
 }
 
-
 /* ═══════════════════════════════════════════════════════════════════════════
    PAGE COMPONENT
    ═══════════════════════════════════════════════════════════════════════════ */
 export default function SOPViewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin, isEditor } = useAuthStore();
+  const { isAdmin, canEditSops } = useAuthStore();
   const [sop, setSop] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // View mode state
+  const [viewMode, setViewMode] = useState('wizard'); // default view is step-by-step Wizard
+
+  // Language state
+  const [lang, setLang] = useState(localStorage.getItem('portal_lang') || 'en');
+
+  const toggleLang = () => {
+    const next = lang === 'en' ? 'ar' : 'en';
+    setLang(next);
+    localStorage.setItem('portal_lang', next);
+  };
+
+  // Wizard state machine
+  const [currentMainIndex, setCurrentMainIndex] = useState(0);
+  const [currentBranch, setCurrentBranch] = useState(null); // 'yes' | 'no' | null
+  const [currentBranchIndex, setCurrentBranchIndex] = useState(0);
+  const [isAcknowledged, setIsAcknowledged] = useState(false);
+  const [selectedDecision, setSelectedDecision] = useState(null); // 'yes' | 'no' | null for active decision step
+  const [wizardCompleted, setWizardCompleted] = useState(false);
+  const [historyLogs, setHistoryLogs] = useState([]); // local trace of step acknowledgments
+  const [submittingLog, setSubmittingLog] = useState(false);
 
   useEffect(() => {
     sopService.get(id).then(r => setSop(r.data)).finally(() => setLoading(false));
@@ -692,9 +706,128 @@ export default function SOPViewPage() {
     </div>
   );
 
+  // Helper to obtain the active step data object
+  const getActiveStep = () => {
+    if (!sop.steps || sop.steps.length === 0) return null;
+    const mainStep = sop.steps[currentMainIndex];
+    if (!mainStep) return null;
+
+    if (currentBranch && mainStep.stepType === 'decision') {
+      let yesBranch = [], noBranch = [];
+      try {
+        const bd = JSON.parse(mainStep.branchData || '{}');
+        yesBranch = bd.yesBranch || [];
+        noBranch = bd.noBranch || [];
+      } catch (_) {}
+      const branchSteps = currentBranch === 'yes' ? yesBranch : noBranch;
+      return branchSteps[currentBranchIndex] || null;
+    }
+    return mainStep;
+  };
+
+  const activeStep = getActiveStep();
+
+  // Wizard navigation handlers
+  const handleAcknowledge = async () => {
+    if (!activeStep) return;
+
+    setSubmittingLog(true);
+    try {
+      // Send compliance logging request to backend API
+      const response = await sopService.acknowledgeStep(sop.id, activeStep.id || activeStep.stepNumber.toString(), sop.currentVersion);
+      const logRecord = response.data;
+      setHistoryLogs(prev => [...prev, {
+        stepTitle: activeStep.title,
+        stepType: activeStep.stepType,
+        acknowledgedAt: logRecord.acknowledgedAt,
+        user: logRecord.user
+      }]);
+    } catch (err) {
+      console.error('Error logging acknowledgment to server:', err);
+      // Fallback local logging in case of offline/auth issues
+      setHistoryLogs(prev => [...prev, {
+        stepTitle: activeStep.title,
+        stepType: activeStep.stepType,
+        acknowledgedAt: new Date().toISOString(),
+        user: { fullName: 'You (Local Fallback Log)' }
+      }]);
+    } finally {
+      setSubmittingLog(false);
+    }
+
+    // Advance the wizard state
+    const mainStep = sop.steps[currentMainIndex];
+
+    if (mainStep.stepType === 'decision') {
+      if (currentBranch === null) {
+        if (!selectedDecision) return;
+
+        let yesBranch = [], noBranch = [];
+        try {
+          const bd = JSON.parse(mainStep.branchData || '{}');
+          yesBranch = bd.yesBranch || [];
+          noBranch = bd.noBranch || [];
+        } catch (_) {}
+        const branchSteps = selectedDecision === 'yes' ? yesBranch : noBranch;
+
+        if (branchSteps.length > 0) {
+          setCurrentBranch(selectedDecision);
+          setCurrentBranchIndex(0);
+          setIsAcknowledged(false);
+        } else {
+          advanceMainStep();
+        }
+      } else {
+        let yesBranch = [], noBranch = [];
+        try {
+          const bd = JSON.parse(mainStep.branchData || '{}');
+          yesBranch = bd.yesBranch || [];
+          noBranch = bd.noBranch || [];
+        } catch (_) {}
+        const branchSteps = currentBranch === 'yes' ? yesBranch : noBranch;
+
+        if (currentBranchIndex + 1 < branchSteps.length) {
+          setCurrentBranchIndex(prev => prev + 1);
+          setIsAcknowledged(false);
+        } else {
+          advanceMainStep();
+        }
+      }
+    } else {
+      advanceMainStep();
+    }
+  };
+
+  const advanceMainStep = () => {
+    if (currentMainIndex + 1 < sop.steps.length) {
+      setCurrentMainIndex(prev => prev + 1);
+      setCurrentBranch(null);
+      setCurrentBranchIndex(0);
+      setSelectedDecision(null);
+      setIsAcknowledged(false);
+    } else {
+      setWizardCompleted(true);
+    }
+  };
+
+  const handleRestart = () => {
+    setCurrentMainIndex(0);
+    setCurrentBranch(null);
+    setCurrentBranchIndex(0);
+    setSelectedDecision(null);
+    setIsAcknowledged(false);
+    setWizardCompleted(false);
+    setHistoryLogs([]);
+  };
+
+  // Progress calculations
+  const progressPercent = sop.steps.length > 0 
+    ? Math.round((currentMainIndex / sop.steps.length) * 100)
+    : 0;
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
-      {/* Header */}
+    <div dir={lang === 'ar' ? 'rtl' : 'ltr'} style={{ minHeight: '100vh', background: 'var(--bg-base)', fontFamily: lang === 'ar' ? 'Cairo, system-ui, sans-serif' : 'inherit' }}>
+      {/* Branded Header */}
       <div style={{
         background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-dark))',
         padding: '16px 20px',
@@ -704,27 +837,37 @@ export default function SOPViewPage() {
           background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
           borderRadius: '50%', width: 36, height: 36,
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer',
+          transform: lang === 'ar' ? 'rotate(180deg)' : 'none'
         }}>
           <ArrowLeft size={16} />
         </button>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, textAlign: lang === 'ar' ? 'right' : 'left' }}>
           <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.72rem' }}>{sop.docType}</div>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.05rem' }}>{sop.title}</div>
         </div>
-        {(isAdmin() || isEditor()) && (
+        
+        <button onClick={toggleLang} style={{
+          background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+          borderRadius: 'var(--radius-sm)', padding: '6px 12px',
+          color: '#fff', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer'
+        }}>
+          {lang === 'en' ? 'العربية' : 'English'}
+        </button>
+
+        {(isAdmin() || canEditSops()) && (
           <button onClick={() => navigate(`/admin/sops/${sop.id}/edit`)} style={{
             background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
             borderRadius: 'var(--radius-sm)', padding: '6px 12px',
             color: '#fff', fontSize: '0.78rem', cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
-            <Edit size={13} /> Edit
+            <Edit size={13} /> {lang === 'ar' ? 'تعديل' : 'Edit'}
           </button>
         )}
       </div>
 
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '24px 16px' }}>
-        {/* Metadata strip */}
+        {/* Metadata Strip */}
         <div style={{
           background: 'var(--bg-card)', border: '1px solid var(--border)',
           borderRadius: 'var(--radius-md)', padding: '16px 20px',
@@ -732,58 +875,310 @@ export default function SOPViewPage() {
         }}>
           {sop.referenceCode && (
             <div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 3 }}>Reference Code</div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 3 }}>{lang === 'ar' ? 'رمز المرجع' : 'Reference Code'}</div>
               <code style={{ color: 'var(--brand-accent)', fontSize: '0.85rem' }}>{sop.referenceCode}</code>
             </div>
           )}
           <div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 3 }}>Version</div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 3 }}>{lang === 'ar' ? 'النسخة' : 'Version'}</div>
             <span className="badge badge-sop">v{sop.currentVersion}</span>
           </div>
           <div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 3 }}>Status</div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 3 }}>{lang === 'ar' ? 'الحالة' : 'Status'}</div>
             <span className={`badge badge-${sop.status}`}>{sop.status}</span>
           </div>
           {sop.category && (
             <div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 3 }}>Category</div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 3 }}>{lang === 'ar' ? 'الفئة' : 'Category'}</div>
               <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{sop.category.name}</span>
             </div>
           )}
           {sop.owner && (
             <div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}><User size={10} /> Owner</div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}><User size={10} /> {lang === 'ar' ? 'المالك' : 'Owner'}</div>
               <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{sop.owner.fullName}</span>
             </div>
           )}
-          {sop.publishedAt && (
+          {isAdmin() && sop.permittedRoles && sop.permittedRoles.length > 0 && (
             <div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={10} /> Published</div>
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{new Date(sop.publishedAt).toLocaleDateString()}</span>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 3 }}>{lang === 'ar' ? 'الجمهور المستهدف' : 'Target Audience'}</div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {sop.permittedRoles.map(r => (
+                  <span key={r} style={{ padding: '2px 6px', borderRadius: 4, fontSize: '0.75rem', background: 'rgba(26,158,150,0.1)', color: 'var(--brand-accent)' }}>
+                    {r.replace('_', ' ')}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Flowchart */}
-        {sop.steps && sop.steps.length > 0 ? (
-          <>
-            <h3 style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <GitBranch size={16} style={{ color: 'var(--brand-accent)' }} />
-              Procedure Flowchart
-            </h3>
-            <FlowchartViewer steps={sop.steps} />
-          </>
-        ) : (
-          <div className="empty-state">
-            <div className="empty-state-icon">📋</div>
-            <h3>No steps defined</h3>
-            <p>This SOP has no procedural steps yet.</p>
-            {(isAdmin() || isEditor()) && (
-              <button className="btn btn-primary btn-sm" onClick={() => navigate(`/admin/sops/${sop.id}/edit`)}>
-                <Edit size={13} /> Add Steps
-              </button>
+        {/* View Mode Toggle Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0, fontSize: '1rem' }}>
+            <GitBranch size={16} style={{ color: 'var(--brand-accent)' }} />
+            {lang === 'ar' ? 'عرض الإجراء' : 'Procedure View'}
+          </h3>
+          <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 99, padding: 3 }}>
+            <button
+              onClick={() => setViewMode('wizard')}
+              style={{
+                padding: '5px 14px', borderRadius: 99, fontSize: '0.78rem', fontWeight: 600,
+                background: viewMode === 'wizard' ? 'var(--brand-primary)' : 'none',
+                color: viewMode === 'wizard' ? '#fff' : 'var(--text-secondary)',
+                transition: 'all var(--transition)'
+              }}
+            >
+              {translations[lang].wizardGuide}
+            </button>
+            <button
+              onClick={() => setViewMode('flowchart')}
+              style={{
+                padding: '5px 14px', borderRadius: 99, fontSize: '0.78rem', fontWeight: 600,
+                background: viewMode === 'flowchart' ? 'var(--brand-primary)' : 'none',
+                color: viewMode === 'flowchart' ? '#fff' : 'var(--text-secondary)',
+                transition: 'all var(--transition)'
+              }}
+            >
+              {translations[lang].flowchartView}
+            </button>
+          </div>
+        </div>
+
+        {/* ── VIEW MODE 1: Guided step-by-step Wizard ── */}
+        {viewMode === 'wizard' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Wizard progress bar */}
+            {!wizardCompleted && (
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: 8, color: 'var(--text-secondary)' }}>
+                  <span>{lang === 'ar' ? 'تقدم الدليل' : 'Wizard Progress'}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--brand-accent)' }}>
+                    {progressPercent}% {lang === 'ar' ? 'مكتمل' : 'Complete'}
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: 6, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+                  <div style={{ width: `${progressPercent}%`, height: '100%', background: 'var(--brand-primary)', transition: 'width 0.3s ease' }} />
+                </div>
+              </div>
+            )}
+
+            {/* Active Card Viewer */}
+            {sop.steps && sop.steps.length > 0 ? (
+              !wizardCompleted ? (
+                <div className="wizard-step-container" style={{
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 16,
+                  padding: 24,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                  animation: 'badgePop 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+                  position: 'relative'
+                }}>
+                  {/* Step path info badges */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                    <span className="badge badge-sop" style={{ background: 'rgba(26,158,150,0.1)' }}>
+                      {lang === 'ar' 
+                        ? `الخطوة الرئيسية ${currentMainIndex + 1} من ${sop.steps.length}` 
+                        : `Main Step ${currentMainIndex + 1} of ${sop.steps.length}`}
+                    </span>
+                    {currentBranch && (
+                      <span className="badge" style={{
+                        background: currentBranch === 'yes' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                        color: currentBranch === 'yes' ? '#22c55e' : '#ef4444',
+                        border: `1px solid ${currentBranch === 'yes' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`
+                      }}>
+                        {currentBranch === 'yes' 
+                          ? (lang === 'ar' ? `مسار نعم - خطوة فرعية ${currentBranchIndex + 1}` : `YES Path Sub-step ${currentBranchIndex + 1}`)
+                          : (lang === 'ar' ? `مسار لا - خطوة فرعية ${currentBranchIndex + 1}` : `NO Path Sub-step ${currentBranchIndex + 1}`)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Active Step node renderer */}
+                  {activeStep ? (
+                    activeStep.stepType === 'decision' && currentBranch === null ? (
+                      /* Rendering Decision prompt inside wizard */
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 20 }}>
+                        <div style={{
+                          width: 60, height: 60, transform: 'rotate(45deg)',
+                          border: '3px solid #f59e0b', borderRadius: 8,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'rgba(245,158,11,0.05)', boxShadow: '0 0 15px rgba(245,158,11,0.15)'
+                        }}>
+                          <span style={{ transform: 'rotate(-45deg)', fontSize: '1.4rem', fontWeight: 900, color: '#f59e0b' }}>?</span>
+                        </div>
+                        <div>
+                          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>{activeStep.title}</h2>
+                          {activeStep.body && <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: 8 }}>{activeStep.body}</p>}
+                        </div>
+
+                        {/* Large Selection Buttons */}
+                        <div style={{ display: 'flex', gap: 16, width: '100%', maxWidth: 360, marginTop: 8 }}>
+                          <button
+                            type="button"
+                            onClick={() => { setSelectedDecision('yes'); setIsAcknowledged(true); }}
+                            style={{
+                              flex: 1, padding: '16px 20px', borderRadius: 12,
+                              border: `2px solid ${selectedDecision === 'yes' ? '#22c55e' : 'var(--border)'}`,
+                              background: selectedDecision === 'yes' ? 'rgba(34,197,94,0.08)' : 'var(--bg-card)',
+                              color: selectedDecision === 'yes' ? '#22c55e' : 'var(--text-secondary)',
+                              fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <CheckCircle size={18} style={{ marginBottom: 6, display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
+                            {lang === 'ar' ? 'نعم (موافق)' : 'YES PATH'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setSelectedDecision('no'); setIsAcknowledged(true); }}
+                            style={{
+                              flex: 1, padding: '16px 20px', borderRadius: 12,
+                              border: `2px solid ${selectedDecision === 'no' ? '#ef4444' : 'var(--border)'}`,
+                              background: selectedDecision === 'no' ? 'rgba(239,68,68,0.08)' : 'var(--bg-card)',
+                              color: selectedDecision === 'no' ? '#ef4444' : 'var(--text-secondary)',
+                              fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <XCircle size={18} style={{ marginBottom: 6, display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
+                            {lang === 'ar' ? 'لا (غير موافق)' : 'NO PATH'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Rendering standard Action / Safety / Reference step */
+                      <div style={{ width: '100%' }}>
+                        <ActionNode step={activeStep} />
+                      </div>
+                    )
+                  ) : (
+                    <p style={{ color: 'var(--text-muted)' }}>Resolving active step...</p>
+                  )}
+
+                  {/* Wizard control button */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+                    {(() => {
+                      const isDecisionQuestion = activeStep && activeStep.stepType === 'decision' && currentBranch === null;
+                      const canAcknowledge = isDecisionQuestion ? !!selectedDecision : true;
+                      return (
+                        <button
+                          type="button"
+                          disabled={!canAcknowledge || submittingLog}
+                          onClick={handleAcknowledge}
+                          style={{
+                            padding: '10px 24px', borderRadius: 8, fontWeight: 700, fontSize: '0.88rem',
+                            background: canAcknowledge ? 'var(--brand-primary)' : 'var(--border)',
+                            color: canAcknowledge ? '#fff' : 'var(--text-secondary)',
+                            border: 'none', cursor: canAcknowledge ? 'pointer' : 'not-allowed',
+                            display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {lang === 'ar' ? 'إقرار ومتابعة' : 'Acknowledge & Continue'}
+                          <ArrowRight size={14} style={{ transform: lang === 'ar' ? 'rotate(180deg)' : 'none' }} />
+                        </button>
+                      );
+                    })()}
+                  </div>
+                </div>
+              ) : (
+                /* Wizard Completion Screen */
+                <div style={{
+                  background: 'var(--bg-surface)',
+                  border: '2px solid var(--brand-primary)',
+                  borderRadius: 16,
+                  padding: 32,
+                  textAlign: 'center',
+                  boxShadow: '0 8px 32px rgba(26, 158, 150, 0.2)',
+                  animation: 'badgePop 0.25s cubic-bezier(0.34,1.56,0.64,1)'
+                }}>
+                  <div style={{
+                    width: 64, height: 64, borderRadius: '50%',
+                    background: 'rgba(26,158,150,0.1)', color: 'var(--brand-accent)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    marginLeft: 'auto', marginRight: 'auto', marginBottom: 20
+                  }}>
+                    <Award size={32} />
+                  </div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>
+                    {lang === 'ar' ? 'تم إكمال الإجراء بالكامل!' : 'SOP Fully Completed!'}
+                  </h2>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: 8, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}>
+                    {lang === 'ar' 
+                      ? 'تم الإقرار بجميع خطوات الإجراء. تم تجميع سجل تقدمك وحفظه للامتثال والسلامة.' 
+                      : 'All procedure steps have been acknowledged. Your progression history has been compiled and logged for safety compliance.'}
+                  </p>
+
+                  {/* Compliance Log Output */}
+                  <div style={{ marginTop: 24, textAlign: 'left' }}>
+                    <h4 style={{ fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 8, textAlign: lang === 'ar' ? 'right' : 'left' }}>
+                      {lang === 'ar' ? 'سجل إقرارات الامتثال' : 'Compliance Acknowledgments Log'}
+                    </h4>
+                    <div style={{
+                      maxHeight: 180, overflowY: 'auto', border: '1px solid var(--border)',
+                      borderRadius: 8, background: 'var(--bg-base)'
+                    }}>
+                      {historyLogs.map((log, idx) => (
+                        <div key={idx} style={{
+                          padding: '10px 14px', borderBottom: '1px solid var(--border)',
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          fontSize: '0.78rem'
+                        }}>
+                          <div>
+                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{log.stepTitle}</span>
+                            <span style={{ fontSize: '0.68rem', background: log.stepType === 'safety_critical' ? 'rgba(239,68,68,0.1)' : 'rgba(26,158,150,0.1)', color: log.stepType === 'safety_critical' ? '#ef4444' : 'var(--brand-accent)', padding: '1px 5px', borderRadius: 4, marginLeft: 8 }}>
+                              {log.stepType}
+                            </span>
+                          </div>
+                          <div style={{ color: 'var(--text-muted)', textAlign: lang === 'ar' ? 'left' : 'right' }}>
+                            <div>{log.user?.fullName || 'Viewer'}</div>
+                            <div style={{ fontSize: '0.68rem' }}>{new Date(log.acknowledgedAt).toLocaleTimeString()}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 28 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleRestart}
+                      style={{ padding: '10px 20px' }}
+                    >
+                      <RotateCcw size={14} /> {lang === 'ar' ? 'إعادة تشغيل الدليل' : 'Restart Wizard'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => navigate('/browse')}
+                      style={{ padding: '10px 20px' }}
+                    >
+                      {translations[lang].backToPortal}
+                    </button>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state-icon">📋</div>
+                <h3>No steps defined</h3>
+                <p>This SOP has no procedural steps yet.</p>
+              </div>
             )}
           </div>
+        )}
+
+        {/* ── VIEW MODE 2: Flowchart diagram view (all steps) ── */}
+        {viewMode === 'flowchart' && (
+          sop.steps && sop.steps.length > 0 ? (
+            <FlowchartViewer steps={sop.steps} />
+          ) : (
+            <div className="empty-state">
+              <div className="empty-state-icon">📋</div>
+              <h3>No steps defined</h3>
+              <p>This SOP has no procedural steps yet.</p>
+            </div>
+          )
         )}
       </div>
     </div>

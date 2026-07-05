@@ -32,5 +32,15 @@ export const useAuthStore = create((set, get) => ({
   },
 
   isAdmin: () => get().user?.roles?.includes('admin'),
-  isEditor: () => get().user?.roles?.includes('editor') || get().user?.roles?.includes('admin'),
+  canEditSops: () => {
+    const roles = get().user?.roles || [];
+    return roles.includes('admin') || roles.includes('station_manager') || roles.includes('transport_manager');
+  },
+  isStationMaster: () => get().user?.roles?.includes('station_master'),
+  // Returns true if the user is ONLY a station_master (no admin or manager roles) — used for redirect logic
+  isStationMasterOnly: () => {
+    const roles = get().user?.roles || [];
+    return roles.includes('station_master') && !roles.includes('admin') && !roles.includes('station_manager') && !roles.includes('transport_manager');
+  },
 }));
+

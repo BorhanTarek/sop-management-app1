@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore';
 import StepBuilder from '../../components/sop/StepBuilder';
 
 const DOC_TYPES = ['SOP', 'Safety Notice', 'Work Instruction'];
+const PERMITTED_ROLES = ['station_manager', 'station_master', 'transport_manager', 'driver', 'occ'];
 
 /* StepBuilder is imported from ../../components/sop/StepBuilder */
 
@@ -123,7 +124,7 @@ export default function SOPCreatePage() {
   const [error, setError]   = useState('');
   const [form, setForm] = useState({
     title: '', referenceCode: '', categoryId: '', ownerId: '',
-    docType: 'SOP', tags: '',
+    docType: 'SOP', tags: '', permittedRoles: [],
   });
   const [steps, setSteps] = useState([
     { id: 1, title: '', body: '', stepType: 'action', refCode: '', sortOrder: 0, yesBranch: [], noBranch: [] }
@@ -135,6 +136,15 @@ export default function SOPCreatePage() {
   }, []);
 
   const setField = (key, val) => setForm(f => ({ ...f, [key]: val }));
+
+  const togglePermittedRole = (role) => {
+    setForm(f => ({
+      ...f,
+      permittedRoles: f.permittedRoles.includes(role)
+        ? f.permittedRoles.filter(r => r !== role)
+        : [...f.permittedRoles, role],
+    }));
+  };
 
   // Resolve display label for selected category
   const resolveLabel = () => {
@@ -230,6 +240,28 @@ export default function SOPCreatePage() {
               </div>
             </div>
 
+            <div className="form-group">
+              <label className="form-label">Target Audience / Permitted Roles</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {PERMITTED_ROLES.map(r => (
+                  <button key={r} type="button"
+                    style={{
+                      padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
+                      border: `1.5px solid ${form.permittedRoles.includes(r) ? 'var(--brand-accent)' : 'var(--border)'}`,
+                      background: form.permittedRoles.includes(r) ? 'rgba(26,158,150,0.1)' : 'transparent',
+                      color: form.permittedRoles.includes(r) ? 'var(--brand-accent)' : 'var(--text-muted)',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onClick={() => togglePermittedRole(r)}>
+                    {r.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 6 }}>
+                Select the roles that can view this procedure in the portal. Admin users can always view all SOPs.
+              </div>
+            </div>
+
             {/* ── Category + Sub-Category ── */}
             <CategorySelector
               tree={tree}
@@ -273,6 +305,17 @@ export default function SOPCreatePage() {
 
               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 8 }}>Status</div>
               <span className="badge badge-draft">Draft · v1.0</span>
+
+              {form.permittedRoles.length > 0 && <>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 8 }}>Target Audience</div>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                  {form.permittedRoles.map(r => (
+                    <span key={r} style={{ padding: '2px 8px', borderRadius: 99, fontSize: '0.7rem', background: 'rgba(26,158,150,0.1)', color: 'var(--brand-accent)' }}>
+                      {r.replace('_', ' ')}
+                    </span>
+                  ))}
+                </div>
+              </>}
 
               {steps.filter(s => s.title).length > 0 && <>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 8 }}>Steps defined</div>

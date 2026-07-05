@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, AlertTriangle, Loader, Clock, UserCheck } from 'lucide-react';
-import { safetyNoticeService } from '../../services/services';
+import { safetyNoticeService, getImageUrl } from '../../services/services';
 import mobilityLogo from '../../assets/Logo-Mobility-Cairo.png';
 import ratpLogo from '../../assets/RDMC LOGO.jpg';
 import { translations } from '../../utils/translations';
@@ -230,13 +230,13 @@ export default function SafetyNoticesBrowsePage() {
                 >
                   {selectedWi.imageUrl.toLowerCase().endsWith('.pdf') ? (
                     <iframe 
-                      src={selectedWi.imageUrl} 
+                      src={getImageUrl(selectedWi.imageUrl)} 
                       style={{ width: '100%', height: 480, border: 'none', pointerEvents: 'none' }} 
                       title="Safety Notice PDF Preview"
                     />
                   ) : (
                     <img 
-                      src={selectedWi.imageUrl} 
+                      src={getImageUrl(selectedWi.imageUrl)} 
                       alt="Safety Notice Illustration"
                       style={{ width: '100%', height: 'auto', maxHeight: 650, objectFit: 'contain' }}
                     />
@@ -377,13 +377,13 @@ export default function SafetyNoticesBrowsePage() {
           </button>
           {selectedWi.imageUrl.toLowerCase().endsWith('.pdf') ? (
             <iframe 
-              src={selectedWi.imageUrl} 
+              src={getImageUrl(selectedWi.imageUrl)} 
               style={{ width: '92vw', height: '90vh', border: 'none', borderRadius: 8, background: '#fff' }} 
               title="Fullscreen Safety Notice PDF"
             />
           ) : (
             <img 
-              src={selectedWi.imageUrl} 
+              src={getImageUrl(selectedWi.imageUrl)} 
               alt="Zoomed Directive"
               style={{
                 maxWidth: '96vw',

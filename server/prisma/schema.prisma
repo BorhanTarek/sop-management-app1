@@ -28,6 +28,7 @@ model User {
   stationAssignments  UserStation[]
   sessions            SopSession[]
   workInstructionAcknowledgments WorkInstructionAcknowledgment[]
+  checklistSubmissions ChecklistSubmission[]
 
   @@map("users")
 }
@@ -148,7 +149,6 @@ model SopStep {
   branchData      String?  // JSON: { yesBranch:[...], noBranch:[...] } for decision steps
   attentionPoints String?  // JSON array of ints e.g. [1,2] for P badges
   safetyPoints    String?  // JSON array of ints e.g. [1] for S badges
-  formConfig      String?  // JSON configuration for form steps
 
   sop       Sop         @relation(fields: [sopId], references: [id], onDelete: Cascade)
   version   SopVersion? @relation(fields: [versionId], references: [id])
@@ -184,11 +184,14 @@ model Station {
   lineCode    String   @default("L3")  // Cairo Metro Line 3
   sortOrder   Int      @default(0)
   isActive    Boolean  @default(true)
+  openingTime String   @default("05:00")
+  closingTime String   @default("23:00")
   createdAt   DateTime @default(now())
 
   userAssignments UserStation[]
   stationSops     StationSop[]
   sessions        SopSession[]
+  checklistSubmissions ChecklistSubmission[]
 
   @@map("stations")
 }
@@ -243,7 +246,6 @@ model SopSessionStep {
   stepType      String?  // action | safety_critical | decision | reference
   acknowledgedAt DateTime @default(now())
   branchChoice  String?  // "yes" | "no" for decision steps
-  formResponses String?  // JSON responses for form steps
 
   session       SopSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
@@ -298,4 +300,47 @@ model WorkInstructionRoleVisibility {
 
   @@id([workInstructionId, roleId])
   @@map("work_instruction_role_visibility")
+}
+
+model ChecklistTask {
+  id            String   @id @default(uuid())
+  text          String
+  procedureType String   // "opening" | "closing"
+  controlType   String   @default("checkbox") // "checkbox" | "dropdown" | "action"
+  options       String?  // JSON string array for dropdown options, e.g. ["Yes", "No"]
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("checklist_tasks")
+}
+
+model ChecklistSubmission {
+  id            String   @id @default(uuid())
+  userId        String
+  stationId     String
+  procedureType String   // "opening" | "closing"
+  shiftDate     String   // YYYY-MM-DD for compliance grouping
+  isCompliant   Boolean  @default(true)
+  submittedAt   DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  station       Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  items         ChecklistSubmissionItem[]
+
+  @@map("checklist_submissions")
+}
+
+model ChecklistSubmissionItem {
+  id            String   @id @default(uuid())
+  submissionId  String
+  taskId        String
+  taskText      String
+  controlType   String   @default("checkbox")
+  value         String   // Stores "true", "false", or dropdown selection, or text details
+
+  submission    ChecklistSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_submission_items")
 }

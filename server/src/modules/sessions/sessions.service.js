@@ -56,7 +56,7 @@ async function startSession(userId, stationId, procedureType) {
 /**
  * Log a step acknowledgment within an active session.
  */
-async function acknowledgeStep(sessionId, userId, stepId, stepTitle, stepType, branchChoice, formResponses) {
+async function acknowledgeStep(sessionId, userId, stepId, stepTitle, stepType, branchChoice) {
   // Verify session belongs to this user and is active
   const session = await prisma.sopSession.findUnique({ where: { id: sessionId } });
   if (!session) throw Object.assign(new Error('Session not found'), { status: 404 });
@@ -66,14 +66,7 @@ async function acknowledgeStep(sessionId, userId, stepId, stepTitle, stepType, b
   }
 
   return prisma.sopSessionStep.create({
-    data: { 
-      sessionId, 
-      stepId, 
-      stepTitle, 
-      stepType, 
-      branchChoice: branchChoice || null,
-      formResponses: formResponses ? JSON.stringify(formResponses) : null
-    },
+    data: { sessionId, stepId, stepTitle, stepType, branchChoice: branchChoice || null },
   });
 }
 

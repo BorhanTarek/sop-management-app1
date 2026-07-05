@@ -19,4 +19,10 @@ async function assignSop(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { list, myStations, getOne, assignSop };
+async function update(req, res, next) {
+  try {
+    res.json(await svc.update(req.params.id, req.body));
+  } catch (err) { next(err); }
+}
+
+module.exports = { list, myStations, getOne, assignSop, update };

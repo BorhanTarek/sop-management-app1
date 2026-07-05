@@ -52,4 +52,12 @@ async function assignSop(stationId, sopId, procedureType) {
   });
 }
 
-module.exports = { getAll, getMyStations, getById, assignSop };
+async function update(id, { name, nameAr, stationCode, isActive, openingTime, closingTime }) {
+  await getById(id);
+  return prisma.station.update({
+    where: { id },
+    data: { name, nameAr, stationCode, isActive, openingTime, closingTime },
+  });
+}
+
+module.exports = { getAll, getMyStations, getById, assignSop, update };

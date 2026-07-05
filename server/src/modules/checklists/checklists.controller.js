@@ -32,12 +32,19 @@ exports.getAllTasks = async (req, res) => {
 // Admin: Create task
 exports.createTask = async (req, res) => {
   try {
-    const { text, procedureType, sortOrder } = req.body;
+    const { text, procedureType, sortOrder, controlType, options } = req.body;
     const task = await prisma.checklistTask.create({
-      data: { text, procedureType, sortOrder: sortOrder || 0 }
+      data: {
+        text,
+        procedureType,
+        sortOrder: sortOrder || 0,
+        controlType: controlType || 'checkbox',
+        options: options ? JSON.stringify(options) : null
+      }
     });
     res.status(201).json(task);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to create task' });
   }
 };
@@ -46,10 +53,17 @@ exports.createTask = async (req, res) => {
 exports.updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const { text, procedureType, sortOrder, isActive } = req.body;
+    const { text, procedureType, sortOrder, isActive, controlType, options } = req.body;
     const task = await prisma.checklistTask.update({
       where: { id },
-      data: { text, procedureType, sortOrder, isActive }
+      data: {
+        text,
+        procedureType,
+        sortOrder,
+        isActive,
+        controlType,
+        options: options ? JSON.stringify(options) : null
+      }
     });
     res.json(task);
   } catch (error) {
@@ -72,20 +86,21 @@ exports.deleteTask = async (req, res) => {
 exports.submitChecklist = async (req, res) => {
   try {
     const { stationId, procedureType, shiftDate, isCompliant, items } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const submission = await prisma.checklistSubmission.create({
       data: {
         userId,
         stationId,
         procedureType,
-        isCompliant,
+        isCompliant: isCompliant !== undefined ? isCompliant : true,
         shiftDate: shiftDate || new Date().toISOString().slice(0, 10),
         items: {
           create: items.map(item => ({
             taskId: item.taskId,
             taskText: item.taskText,
-            isChecked: item.isChecked
+            controlType: item.controlType || 'checkbox',
+            value: String(item.value)
           }))
         }
       },
@@ -110,7 +125,8 @@ exports.getLogs = async (req, res) => {
       orderBy: { submittedAt: 'desc' },
       include: {
         user: { select: { id: true, fullName: true, email: true } },
-        station: { select: { id: true, name: true, stationCode: true, lineCode: true } }
+        station: { select: { id: true, name: true, stationCode: true, lineCode: true } },
+        items: true
       }
     });
     res.json(logs);

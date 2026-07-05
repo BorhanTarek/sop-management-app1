@@ -13,5 +13,7 @@ router.get('/my', ctrl.myStations);
 router.get('/:id', authorize('admin', 'station_manager', 'transport_manager'), ctrl.getOne);
 // Admin assigns an SOP to a station as opening/closing procedure
 router.post('/:id/assign-sop', authorize('admin'), ctrl.assignSop);
+// Admin/manager can update station attributes
+router.patch('/:id', authorize('admin', 'station_manager', 'transport_manager'), ctrl.update);
 
 module.exports = router;

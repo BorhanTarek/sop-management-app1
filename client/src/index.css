@@ -2,38 +2,38 @@
 
 /* ─── Design Tokens ─────────────────────────────────── */
 :root {
-  --brand-primary:    #1a9e96;
-  --brand-dark:       #137a74;
-  --brand-light:      #e0f5f4;
-  --brand-accent:     #00bfb3;
+  --brand-primary:    #00A591;  /* RATP Dev Mint Green */
+  --brand-dark:       #008B7A;  /* Darker Mint Green */
+  --brand-light:      #def4ec;  /* Soft Mint background highlight */
+  --brand-accent:     #00BFA5;  /* Bright Mint accent */
 
-  --bg-base:          #0f1117;
-  --bg-surface:       #16191f;
-  --bg-card:          #1e2229;
-  --bg-hover:         #252930;
-  --bg-input:         #1a1d24;
+  --bg-base:          #f4fcf9;  /* Pale mint-tinted gray background */
+  --bg-surface:       #ffffff;  /* Pure white cards/surface */
+  --bg-card:          #ffffff;  /* Pure white card backgrounds */
+  --bg-hover:         #eefaf6;  /* Extremely soft mint hover */
+  --bg-input:         #f4fcf9;  /* Light input backgrounds */
 
-  --text-primary:     #f0f4f8;
-  --text-secondary:   #8b95a6;
-  --text-muted:       #555e6d;
+  --text-primary:     #082823;  /* Dark firtree pine text */
+  --text-secondary:   #2d4d48;  /* Medium pine-slate text */
+  --text-muted:       #688883;  /* Muted pine-slate text */
 
-  --border:           #272c38;
+  --border:           #d2eae4;  /* Soft mint-gray borders */
   --border-focus:     var(--brand-primary);
 
-  --success:          #22c55e;
-  --warning:          #f59e0b;
-  --danger:           #ef4444;
-  --info:             #3b82f6;
+  --success:          #10b981;  /* Emerald success */
+  --warning:          #f59e0b;  /* Amber warning */
+  --danger:           #ef4444;  /* Red danger */
+  --info:             #06b6d4;  /* Cyan info */
 
   --radius-sm:        6px;
   --radius-md:        10px;
   --radius-lg:        16px;
   --radius-xl:        24px;
 
-  --shadow-sm:        0 1px 3px rgba(0,0,0,0.4);
-  --shadow-md:        0 4px 16px rgba(0,0,0,0.5);
-  --shadow-lg:        0 8px 32px rgba(0,0,0,0.6);
-  --shadow-brand:     0 0 20px rgba(26,158,150,0.25);
+  --shadow-sm:        0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md:        0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg:        0 8px 32px rgba(0,0,0,0.12);
+  --shadow-brand:     0 0 20px rgba(0,165,145,0.08);
 
   --sidebar-w:        260px;
   --topbar-h:         64px;

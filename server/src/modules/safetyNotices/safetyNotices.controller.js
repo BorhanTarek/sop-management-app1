@@ -91,8 +91,12 @@ exports.getOne = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const { title, content, isPublished, permittedRoles } = req.body;
-    const imageUrl = req.file ? `/api/uploads/${req.file.filename}` : null;
+    const { title, content, isPublished, permittedRoles, imageUrlLink } = req.body;
+    let imageUrl = req.file ? `/api/uploads/${req.file.filename}` : null;
+    
+    if (!imageUrl && imageUrlLink) {
+      imageUrl = imageUrlLink;
+    }
 
     if (!title || !content) {
       return res.status(400).json({ error: 'Title and content are required' });
@@ -139,7 +143,7 @@ exports.create = async (req, res, next) => {
 exports.update = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, content, isPublished, permittedRoles } = req.body;
+    const { title, content, isPublished, permittedRoles, imageUrlLink } = req.body;
 
     const existing = await prisma.workInstruction.findUnique({ where: { id } });
     if (!existing) {
@@ -168,13 +172,21 @@ exports.update = async (req, res, next) => {
 
     if (req.file) {
       // Delete old file if exists
-      if (existing.imageUrl) {
+      if (existing.imageUrl && existing.imageUrl.startsWith('/api/uploads/')) {
         const oldPath = path.join(__dirname, '../../../uploads', path.basename(existing.imageUrl));
         if (fs.existsSync(oldPath)) {
           try { fs.unlinkSync(oldPath); } catch (e) { console.error('Failed to delete old image', e); }
         }
       }
       data.imageUrl = `/api/uploads/${req.file.filename}`;
+    } else if (imageUrlLink !== undefined) {
+      if (existing.imageUrl && existing.imageUrl.startsWith('/api/uploads/') && imageUrlLink !== existing.imageUrl) {
+        const oldPath = path.join(__dirname, '../../../uploads', path.basename(existing.imageUrl));
+        if (fs.existsSync(oldPath)) {
+          try { fs.unlinkSync(oldPath); } catch (e) { console.error('Failed to delete old image', e); }
+        }
+      }
+      data.imageUrl = imageUrlLink || null;
     }
 
     if (roles !== undefined) {

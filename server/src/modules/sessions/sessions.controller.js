@@ -9,9 +9,9 @@ async function start(req, res, next) {
 
 async function acknowledge(req, res, next) {
   try {
-    const { stepId, stepTitle, stepType, branchChoice } = req.body;
+    const { stepId, stepTitle, stepType, branchChoice, formResponses } = req.body;
     res.status(201).json(
-      await svc.acknowledgeStep(req.params.id, req.user.id, stepId, stepTitle, stepType, branchChoice)
+      await svc.acknowledgeStep(req.params.id, req.user.id, stepId, stepTitle, stepType, branchChoice, formResponses)
     );
   } catch (err) { next(err); }
 }

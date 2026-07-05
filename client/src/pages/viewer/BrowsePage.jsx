@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, ArrowLeft, Search, Settings, Loader, BookOpen } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Search, Settings, Loader, BookOpen, MapPin } from 'lucide-react';
 import { categoryService, sopService } from '../../services/services';
 import { useAuthStore } from '../../store/authStore';
 import ratpLogo from '../../assets/RDMC LOGO.jpg';
@@ -128,6 +128,18 @@ export default function BrowsePage() {
           }}>
             <BookOpen size={13} /> {translations[lang].safetyNoticesButton}
           </button>
+
+          {user?.roles?.includes('station_master') && (
+            <button onClick={() => navigate('/station')} style={{
+              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+              borderRadius: 'var(--radius-sm)', padding: '6px 12px',
+              color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6
+            }}>
+              <MapPin size={13} /> {translations[lang].openingClosing}
+            </button>
+          )}
+
           {isAdmin() && (
             <button onClick={() => navigate('/admin')} style={{
               background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',

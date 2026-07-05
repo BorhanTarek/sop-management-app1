@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import {
   LayoutDashboard, Users, FolderTree, FileText,
-  LogOut, ChevronRight, Bell, Activity, BookOpen
+  LogOut, ChevronRight, Bell, Activity, BookOpen, ClipboardCheck
 } from 'lucide-react';
 import mobilityLogo from '../../assets/Logo-Mobility-Cairo.png';
 
@@ -10,6 +10,7 @@ const navItems = [
   { label: 'Dashboard',   path: '/admin',                  icon: LayoutDashboard, exact: true },
   { label: 'SOPs',        path: '/admin/sops',             icon: FileText },
   { label: 'Safety Notices', path: '/admin/safety-notices',   icon: BookOpen },
+  { label: 'Opening & Closing', path: '/admin/opening-closing', icon: ClipboardCheck },
   { label: 'Categories',  path: '/admin/categories',       icon: FolderTree },
   { label: 'Users',       path: '/admin/users',            icon: Users },
   { label: 'Compliance',  path: '/admin/compliance',       icon: Activity },

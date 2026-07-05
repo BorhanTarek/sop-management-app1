@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, UserCheck, Loader, MapPin } from 'lucide-react';
-import { userService, stationService } from '../../services/services';
+import { Plus, Search, Edit, Trash2, UserCheck, Loader } from 'lucide-react';
+import { userService } from '../../services/services';
 
 const ROLES = ['admin', 'station_manager', 'station_master', 'transport_manager', 'driver', 'occ'];
 
@@ -13,15 +13,9 @@ function UserModal({ user, onClose, onSaved }) {
     department: user?.department || '',
     roleNames: user?.roles || ['viewer'],
     isActive: user?.isActive ?? true,
-    stationIds: user?.stationAssignments?.map(sa => sa.station?.id || sa.stationId) || [],
   });
-  const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    stationService.list().then(r => setStations(r.data));
-  }, []);
 
   const toggleRole = (role) => setForm(f => ({
     ...f,
@@ -30,22 +24,12 @@ function UserModal({ user, onClose, onSaved }) {
       : [...f.roleNames, role],
   }));
 
-  const toggleStation = (id) => setForm(f => ({
-    ...f,
-    stationIds: f.stationIds.includes(id)
-      ? f.stationIds.filter(s => s !== id)
-      : [...f.stationIds, id],
-  }));
-
-  const isStationMaster = form.roleNames.includes('station_master');
-
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true); setError('');
     try {
       const payload = {
         ...form,
-        stationIds: isStationMaster ? form.stationIds : [],
       };
       if (isEdit) await userService.update(user.id, payload);
       else await userService.create(payload);
@@ -105,40 +89,7 @@ function UserModal({ user, onClose, onSaved }) {
             </div>
           </div>
 
-          {/* Station Assignment — only when station_master is selected */}
-          {isStationMaster && (
-            <div className="form-group">
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <MapPin size={13} style={{ color: 'var(--brand-accent)' }} />
-                Assign Stations (Line 3)
-              </label>
-              <div style={{
-                border: '1px solid var(--border)', borderRadius: 10, padding: 10,
-                maxHeight: 180, overflowY: 'auto', background: 'var(--bg-card)',
-                display: 'flex', flexDirection: 'column', gap: 4,
-              }}>
-                {stations.map(st => (
-                  <label key={st.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', cursor: 'pointer', borderRadius: 6, transition: 'background 0.1s ease', background: form.stationIds.includes(st.id) ? 'rgba(26,158,150,0.08)' : 'transparent' }}>
-                    <input
-                      type="checkbox"
-                      checked={form.stationIds.includes(st.id)}
-                      onChange={() => toggleStation(st.id)}
-                      style={{ accentColor: 'var(--brand-primary)' }}
-                    />
-                    <span style={{ fontSize: '0.82rem', fontWeight: form.stationIds.includes(st.id) ? 700 : 400, color: form.stationIds.includes(st.id) ? 'var(--brand-accent)' : 'var(--text-secondary)' }}>
-                      {st.stationCode} — {st.name}
-                    </span>
-                    {st.nameAr && <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)', direction: 'rtl' }}>{st.nameAr}</span>}
-                  </label>
-                ))}
-              </div>
-              {form.stationIds.length > 0 && (
-                <div style={{ marginTop: 6, fontSize: '0.75rem', color: 'var(--brand-accent)' }}>
-                  {form.stationIds.length} station{form.stationIds.length > 1 ? 's' : ''} selected
-                </div>
-              )}
-            </div>
-          )}
+          {/* Station Assignment removed */}
 
           {isEdit && (
             <div className="form-group">
@@ -211,14 +162,14 @@ export default function UsersPage() {
             <thead>
               <tr>
                 <th>Name</th><th>Username</th><th>Department</th>
-                <th>Roles</th><th>Stations</th><th>Status</th><th>Actions</th>
+                <th>Roles</th><th>Status</th><th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading
-                ? <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40 }}><div className="loading-spinner" /></td></tr>
+                ? <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40 }}><div className="loading-spinner" /></td></tr>
                 : users.length === 0
-                  ? <tr><td colSpan={7}><div className="empty-state"><div className="empty-state-icon">👤</div><h3>No users found</h3></div></td></tr>
+                  ? <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-icon">👤</div><h3>No users found</h3></div></td></tr>
                   : users.map(u => (
                     <tr key={u.id}>
                       <td><span className="cell-primary">{u.fullName}</span></td>
@@ -237,22 +188,7 @@ export default function UsersPage() {
                           ))}
                         </div>
                       </td>
-                      <td>
-                        {(u.stationAssignments || []).length > 0 ? (
-                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                            {u.stationAssignments.map(sa => (
-                              <span key={sa.station?.id || sa.stationId} style={{
-                                padding: '2px 8px', borderRadius: 99, fontSize: '0.7rem', fontWeight: 600,
-                                background: 'rgba(13,148,136,0.08)', color: '#0d9488',
-                                border: '1px solid rgba(13,148,136,0.2)',
-                                display: 'flex', alignItems: 'center', gap: 3,
-                              }}>
-                                <MapPin size={9} /> {sa.station?.stationCode || '—'}
-                              </span>
-                            ))}
-                          </div>
-                        ) : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>}
-                      </td>
+                      {/* Stations column removed */}
                       <td>
                         <span className={`badge ${u.isActive ? 'badge-published' : 'badge-archived'}`}>
                           {u.isActive ? 'Active' : 'Inactive'}

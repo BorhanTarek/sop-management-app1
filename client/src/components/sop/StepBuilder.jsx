@@ -2,13 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { Plus, Trash2, ArrowUp, ArrowDown, CheckCircle, XCircle, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
 
 // ─── Step type metadata ────────────────────────────────────────────────
-const STEP_TYPES = ['action', 'safety_critical', 'decision', 'reference', 'form'];
+const STEP_TYPES = ['action', 'safety_critical', 'decision', 'reference'];
 const STEP_META = {
   action:          { label: 'Action',          icon: '▬',  color: '#1a9e96' },
   safety_critical: { label: 'Safety Critical', icon: '⚠',  color: '#dc2626' },
   decision:        { label: 'Decision',        icon: '◇',  color: '#f59e0b' },
   reference:       { label: 'Reference',       icon: '📎', color: '#818cf8' },
-  form:            { label: 'Form/Checklist',  icon: '📋', color: '#06b6d4' },
 };
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -294,7 +293,6 @@ export default function StepBuilder({ steps, setSteps }) {
     noBranch: [],
     attentionPoints: [],
     safetyPoints: [],
-    formConfig: type === 'form' ? { checkboxes: [], dropdown: { label: '', options: [] }, action: null } : null,
   });
 
   const addStep = (type) => setSteps(s => [...s, newStep(type)]);
@@ -322,7 +320,7 @@ export default function StepBuilder({ steps, setSteps }) {
             noBranch: st.noBranch || [],
             refCode: newType === 'decision' ? '' : st.refCode,
             attentionPoints: st.attentionPoints || [],
-            formConfig: newType === 'form' ? { checkboxes: [], dropdown: { label: '', options: [] }, action: null } : null,
+            safetyPoints: st.safetyPoints || [],
           }
         : st
     ));
@@ -428,108 +426,6 @@ export default function StepBuilder({ steps, setSteps }) {
                     />
                   </div>
                 </>
-              ) : step.stepType === 'form' ? (
-                /* ── FORM STEP ── */
-                <>
-                  <div className="action-step-main-row">
-                    <input
-                      className="form-control"
-                      placeholder="Form step title, e.g. Evaluate platform equipment *"
-                      value={step.title}
-                      onChange={e => updateStep(idx, 'title', e.target.value)}
-                    />
-                    <WICodeInput
-                      value={step.refCode}
-                      onChange={val => updateStep(idx, 'refCode', val)}
-                      placeholder="RTM-H11 (optional)"
-                    />
-                  </div>
-                  <input
-                    className="form-control"
-                    placeholder="Form instruction description (optional)"
-                    value={step.body || ''}
-                    onChange={e => updateStep(idx, 'body', e.target.value)}
-                    style={{ marginTop: 8, marginBottom: 12 }}
-                  />
-
-                  {/* Form Fields Config */}
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 16, background: 'var(--bg-card)' }}>
-                    <h4 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 12 }}>
-                      Form Inputs Configuration
-                    </h4>
-
-                    {/* Checkboxes Config */}
-                    <div style={{ marginBottom: 16 }}>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-                        Checkboxes (one item per line)
-                      </label>
-                      <textarea
-                        className="form-control"
-                        rows={3}
-                        placeholder="e.g. Check elevator status&#10;Verify escalators operational&#10;Ensure ticket gate lights are green"
-                        value={step.formConfig?.checkboxes?.join('\n') || ''}
-                        onChange={e => {
-                          const items = e.target.value.split('\n').filter(Boolean);
-                          const config = { ...(step.formConfig || {}), checkboxes: items };
-                          updateStep(idx, 'formConfig', config);
-                        }}
-                      />
-                    </div>
-
-                    {/* Dropdown Config */}
-                    <div className="grid-2" style={{ gap: 12 }}>
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-                          Dropdown Label
-                        </label>
-                        <input
-                          className="form-control"
-                          placeholder="e.g. Station Lighting Mode"
-                          value={step.formConfig?.dropdown?.label || ''}
-                          onChange={e => {
-                            const dropdown = { ...(step.formConfig?.dropdown || {}), label: e.target.value };
-                            const config = { ...(step.formConfig || {}), dropdown };
-                            updateStep(idx, 'formConfig', config);
-                          }}
-                        />
-                      </div>
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-                          Dropdown Options (comma-separated)
-                        </label>
-                        <input
-                          className="form-control"
-                          placeholder="e.g. Bright, Muted, Emergency"
-                          value={step.formConfig?.dropdown?.options?.join(', ') || ''}
-                          onChange={e => {
-                            const opts = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-                            const dropdown = { ...(step.formConfig?.dropdown || {}), options: opts };
-                            const config = { ...(step.formConfig || {}), dropdown };
-                            updateStep(idx, 'formConfig', config);
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Process Action Config */}
-                    <div style={{ marginTop: 14 }}>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-                        Required Process Action Button
-                      </label>
-                      <input
-                        className="form-control"
-                        placeholder="e.g. Run Public Address System Test"
-                        value={step.formConfig?.action?.label || ''}
-                        onChange={e => {
-                          const labelVal = e.target.value;
-                          const action = labelVal ? { label: labelVal, actionKey: `action_${Date.now()}` } : null;
-                          const config = { ...(step.formConfig || {}), action };
-                          updateStep(idx, 'formConfig', config);
-                        }}
-                      />
-                    </div>
-                  </div>
-                </>
               ) : isSafety ? (
                 /* ── SAFETY CRITICAL ── */
                 <>
@@ -611,9 +507,6 @@ export default function StepBuilder({ steps, setSteps }) {
         </button>
         <button type="button" className="btn btn-secondary step-add-btn--reference" onClick={() => addStep('reference')}>
           <Plus size={13} /> 📎 Reference
-        </button>
-        <button type="button" className="btn btn-secondary step-add-btn--form" style={{ background: 'rgba(6,182,212,0.1)', color: '#06b6d4', border: '1px solid rgba(6,182,212,0.2)' }} onClick={() => addStep('form')}>
-          <Plus size={13} /> 📋 Form Step
         </button>
       </div>
     </div>

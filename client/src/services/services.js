@@ -41,6 +41,7 @@ export const stationService = {
   myStations: () => api.get('/stations/my'),
   get: (id) => api.get(`/stations/${id}`),
   assignSop: (id, sopId, procedureType) => api.post(`/stations/${id}/assign-sop`, { sopId, procedureType }),
+  update: (id, data) => api.patch(`/stations/${id}`, data),
 };
 
 export const sessionService = {
@@ -59,6 +60,16 @@ export const safetyNoticeService = {
   delete: (id) => api.delete(`/safety-notices/${id}`),
   acknowledge: (id) => api.post(`/safety-notices/${id}/acknowledge`),
   logs: (id) => api.get(`/safety-notices/${id}/logs`),
+};
+
+export const checklistService = {
+  getTasks: () => api.get('/checklists/tasks'),
+  submit: (data) => api.post('/checklists/submit', data),
+  getAllTasks: () => api.get('/checklists/tasks/all'),
+  createTask: (data) => api.post('/checklists/tasks', data),
+  updateTask: (id, data) => api.put(`/checklists/tasks/${id}`, data),
+  deleteTask: (id) => api.delete(`/checklists/tasks/${id}`),
+  getLogs: () => api.get('/checklists/logs'),
 };
 
 export const getImageUrl = (url) => {

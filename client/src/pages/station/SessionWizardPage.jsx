@@ -55,20 +55,6 @@ export default function SessionWizardPage() {
   const [selectedDecision, setSelectedDecision] = useState(null);
   const [stepLogs, setStepLogs] = useState([]);
 
-  // Form Inputs states
-  const [checkedItems, setCheckedItems] = useState({});
-  const [selectedDropdown, setSelectedDropdown] = useState('');
-  const [actionClicked, setActionClicked] = useState(false);
-  const [actionRunning, setActionRunning] = useState(false);
-
-  // Reset inputs when active step changes
-  useEffect(() => {
-    setCheckedItems({});
-    setSelectedDropdown('');
-    setActionClicked(false);
-    setActionRunning(false);
-  }, [currentIndex, currentBranch, currentBranchIndex]);
-
   useEffect(() => {
     sessionService.get(sessionId)
       .then(r => {
@@ -113,26 +99,7 @@ export default function SessionWizardPage() {
 
   const activeStep = getActiveStep();
   const isDecisionQuestion = activeStep?.stepType === 'decision' && currentBranch === null;
-  
-  const getCanProceed = () => {
-    if (isDecisionQuestion) return !!selectedDecision;
-    if (activeStep?.stepType === 'form') {
-      const checkboxes = activeStep.formConfig?.checkboxes || [];
-      const allChecked = checkboxes.every(item => !!checkedItems[item]);
-      
-      const dropdownConfig = activeStep.formConfig?.dropdown;
-      const dropdownRequired = dropdownConfig?.label && dropdownConfig?.options?.length > 0;
-      const dropdownSelected = dropdownRequired ? !!selectedDropdown : true;
-      
-      const actionConfig = activeStep.formConfig?.action;
-      const actionRequired = !!actionConfig?.label;
-      const actionDone = actionRequired ? actionClicked : true;
-      
-      return allChecked && dropdownSelected && actionDone;
-    }
-    return true;
-  };
-  const canProceed = getCanProceed();
+  const canProceed = isDecisionQuestion ? !!selectedDecision : true;
 
   const handleAcknowledge = async () => {
     if (!canProceed || submitting) return;
@@ -143,11 +110,6 @@ export default function SessionWizardPage() {
         stepTitle: activeStep.title,
         stepType: activeStep.stepType,
         branchChoice: isDecisionQuestion ? selectedDecision : undefined,
-        formResponses: activeStep.stepType === 'form' ? {
-          checkedItems,
-          selectedDropdown,
-          actionExecuted: actionClicked ? activeStep.formConfig?.action?.label : null
-        } : undefined
       };
       const logRes = await sessionService.acknowledge(sessionId, logData);
       setStepLogs(prev => [...prev, logRes.data]);
@@ -258,54 +220,20 @@ export default function SessionWizardPage() {
                 {stepLogs.map((log, i) => (
                   <div key={i} style={{
                     padding: '9px 14px', borderBottom: '1px solid var(--border)',
-                    display: 'flex', flexDirection: 'column', gap: 4,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     fontSize: '0.78rem',
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{log.stepTitle || `Step ${i + 1}`}</span>
-                        {log.branchChoice && (
-                          <span style={{ marginLeft: 8, fontSize: '0.68rem', background: log.branchChoice === 'yes' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: log.branchChoice === 'yes' ? '#22c55e' : '#ef4444', padding: '1px 6px', borderRadius: 4 }}>
-                            {log.branchChoice.toUpperCase()}
-                          </span>
-                        )}
-                        {log.stepType === 'form' && (
-                          <span style={{ marginLeft: 8, fontSize: '0.68rem', background: 'rgba(6,182,212,0.1)', color: '#06b6d4', padding: '1px 6px', borderRadius: 4 }}>
-                            FORM
-                          </span>
-                        )}
-                      </div>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
-                        {new Date(log.acknowledgedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                      </span>
+                    <div>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{log.stepTitle || `Step ${i + 1}`}</span>
+                      {log.branchChoice && (
+                        <span style={{ marginLeft: 8, fontSize: '0.68rem', background: log.branchChoice === 'yes' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: log.branchChoice === 'yes' ? '#22c55e' : '#ef4444', padding: '1px 6px', borderRadius: 4 }}>
+                          {log.branchChoice.toUpperCase()}
+                        </span>
+                      )}
                     </div>
-
-                    {/* Render form responses if available */}
-                    {log.formResponses && (() => {
-                      try {
-                        const resp = typeof log.formResponses === 'string' ? JSON.parse(log.formResponses) : log.formResponses;
-                        const checks = Object.entries(resp.checkedItems || {}).filter(([_, v]) => v).map(([k]) => k);
-                        return (
-                          <div style={{ fontSize: '0.72rem', background: 'var(--bg-card)', padding: 10, borderRadius: 6, border: '1px solid var(--border)', marginTop: 4 }}>
-                            {checks.length > 0 && (
-                              <div style={{ marginBottom: 4 }}>
-                                <strong>✓ Verified:</strong> {checks.join(', ')}
-                              </div>
-                            )}
-                            {resp.selectedDropdown && (
-                              <div style={{ marginBottom: 4 }}>
-                                <strong>Dropdown:</strong> {resp.selectedDropdown}
-                              </div>
-                            )}
-                            {resp.actionExecuted && (
-                              <div>
-                                <strong>⚡ Action run:</strong> {resp.actionExecuted}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      } catch (e) { return null; }
-                    })()}
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                      {new Date(log.acknowledgedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -393,99 +321,6 @@ export default function SessionWizardPage() {
                       NO
                     </button>
                   </div>
-                </div>
-              ) : activeStep?.stepType === 'form' ? (
-                /* ── Form View ── */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                  <div style={{ textAlign: 'center', marginBottom: 10 }}>
-                    <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>{activeStep.title}</h3>
-                    {activeStep.body && <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 6 }}>{activeStep.body}</p>}
-                  </div>
-
-                  {/* Render Checkboxes */}
-                  {activeStep.formConfig?.checkboxes?.length > 0 && (
-                    <div style={{ textAlign: 'left' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Required Verifications
-                      </label>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {activeStep.formConfig.checkboxes.map((item, idx) => (
-                          <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, fontSize: '0.88rem', color: 'var(--text-primary)', cursor: 'pointer', background: checkedItems[item] ? 'rgba(6,182,212,0.03)' : 'var(--bg-card)', padding: '12px 14px', borderRadius: 8, border: `1px solid ${checkedItems[item] ? 'var(--brand-primary)' : 'var(--border)'}`, transition: 'all 0.15s ease' }}>
-                            <input
-                              type="checkbox"
-                              checked={!!checkedItems[item]}
-                              onChange={e => setCheckedItems(prev => ({ ...prev, [item]: e.target.checked }))}
-                              style={{ marginTop: 3, cursor: 'pointer' }}
-                            />
-                            <span>{item}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Render Dropdown */}
-                  {activeStep.formConfig?.dropdown?.label && activeStep.formConfig?.dropdown?.options?.length > 0 && (
-                    <div style={{ textAlign: 'left' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        {activeStep.formConfig.dropdown.label}
-                      </label>
-                      <select
-                        className="form-control"
-                        value={selectedDropdown}
-                        onChange={e => setSelectedDropdown(e.target.value)}
-                        style={{ width: '100%', height: 42, padding: '0 12px' }}
-                      >
-                        <option value="">-- Select Option --</option>
-                        {activeStep.formConfig.dropdown.options.map((opt, idx) => (
-                          <option key={idx} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Render Process Action button */}
-                  {activeStep.formConfig?.action?.label && (
-                    <div style={{ textAlign: 'left' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Required Process Action
-                      </label>
-                      <button
-                        type="button"
-                        disabled={actionRunning || actionClicked}
-                        onClick={() => {
-                          setActionRunning(true);
-                          setTimeout(() => {
-                            setActionRunning(false);
-                            setActionClicked(true);
-                          }, 1500);
-                        }}
-                        style={{
-                          width: '100%', padding: '12px 20px', borderRadius: 10,
-                          fontWeight: 700, fontSize: '0.85rem',
-                          background: actionClicked ? 'rgba(34,197,94,0.1)' : 'var(--brand-primary)',
-                          color: actionClicked ? '#22c55e' : '#fff',
-                          border: actionClicked ? '1.5px solid rgba(34,197,94,0.35)' : 'none',
-                          cursor: actionRunning || actionClicked ? 'not-allowed' : 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                          transition: 'all 0.15s ease',
-                          boxShadow: !actionClicked && !actionRunning ? '0 4px 12px rgba(0,165,145,0.2)' : 'none'
-                        }}
-                      >
-                        {actionRunning ? (
-                          <>
-                            <Loader size={14} className="spin" /> Executing Action...
-                          </>
-                        ) : actionClicked ? (
-                          <>
-                            <CheckCircle size={14} /> Process Action Executed Successfully
-                          </>
-                        ) : (
-                          activeStep.formConfig.action.label
-                        )}
-                      </button>
-                    </div>
-                  )}
                 </div>
               ) : (
                 activeStep && <StepCard step={activeStep} />

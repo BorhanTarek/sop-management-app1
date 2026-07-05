@@ -171,7 +171,6 @@ export default function SOPCreatePage() {
           : null,
         attentionPoints: s.attentionPoints || [],
         safetyPoints: s.safetyPoints || [],
-        formConfig: s.stepType === 'form' ? s.formConfig : null,
       }));
 
   const submit = async (e) => {

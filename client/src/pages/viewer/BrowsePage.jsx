@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, ArrowLeft, Search, Settings, Loader, BookOpen, MapPin } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Search, Settings, Loader, BookOpen, ClipboardCheck } from 'lucide-react';
 import { categoryService, sopService } from '../../services/services';
 import { useAuthStore } from '../../store/authStore';
 import ratpLogo from '../../assets/RDMC LOGO.jpg';
@@ -9,7 +9,7 @@ import { translations } from '../../utils/translations';
 
 export default function BrowsePage() {
   const navigate = useNavigate();
-  const { user, isAdmin, logout } = useAuthStore();
+  const { user, isAdmin, isStationMaster, logout } = useAuthStore();
   const [tree, setTree] = useState([]);
   const [path, setPath] = useState([]); // breadcrumb stack of category nodes
   const [sops, setSops] = useState(null); // null = not viewing SOPs yet
@@ -120,6 +120,17 @@ export default function BrowsePage() {
             {lang === 'en' ? 'العربية' : 'English'}
           </button>
           
+          {(isStationMaster() || isAdmin() || user?.roles?.includes('station_manager')) && (
+            <button onClick={() => navigate('/opening-closing')} style={{
+              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+              borderRadius: 'var(--radius-sm)', padding: '6px 12px',
+              color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6
+            }}>
+              <ClipboardCheck size={13} /> {translations[lang].openingClosing}
+            </button>
+          )}
+
           <button onClick={() => navigate('/safety-notices')} style={{
             background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
             borderRadius: 'var(--radius-sm)', padding: '6px 12px',
@@ -128,18 +139,6 @@ export default function BrowsePage() {
           }}>
             <BookOpen size={13} /> {translations[lang].safetyNoticesButton}
           </button>
-
-          {user?.roles?.includes('station_master') && (
-            <button onClick={() => navigate('/station')} style={{
-              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
-              borderRadius: 'var(--radius-sm)', padding: '6px 12px',
-              color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 6
-            }}>
-              <MapPin size={13} /> {translations[lang].openingClosing}
-            </button>
-          )}
-
           {isAdmin() && (
             <button onClick={() => navigate('/admin')} style={{
               background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',

@@ -172,7 +172,6 @@ export default function SOPEditPage() {
           noBranch,
           attentionPoints: st.attentionPoints || [],
           safetyPoints: st.safetyPoints || [],
-          formConfig: st.formConfig || (st.stepType === 'form' ? { checkboxes: [], dropdown: { label: '', options: [] }, action: null } : null),
         };
       }));
       setTree(catRes.data);       // store as tree (with children)
@@ -206,7 +205,6 @@ export default function SOPEditPage() {
           : null,
         attentionPoints: s.attentionPoints || [],
         safetyPoints: s.safetyPoints || [],
-        formConfig: s.stepType === 'form' ? s.formConfig : null,
       }));
 
   const save = async (e) => {

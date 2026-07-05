@@ -20,6 +20,8 @@ import SafetyNoticeCreatePage from './pages/admin/SafetyNoticeCreatePage';
 import SafetyNoticeEditPage from './pages/admin/SafetyNoticeEditPage';
 import SafetyNoticeLogsPage from './pages/admin/SafetyNoticeLogsPage';
 import SafetyNoticesBrowsePage from './pages/viewer/SafetyNoticesBrowsePage';
+import OpeningClosingFormPage from './pages/admin/OpeningClosingFormPage';
+import OpeningClosingSubmitPage from './pages/viewer/OpeningClosingSubmitPage';
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuthStore();
@@ -80,6 +82,7 @@ export default function App() {
           <Route path="safety-notices/new" element={<SafetyNoticeCreatePage />} />
           <Route path="safety-notices/:id/edit" element={<SafetyNoticeEditPage />} />
           <Route path="safety-notices/:id/logs" element={<SafetyNoticeLogsPage />} />
+          <Route path="opening-closing" element={<OpeningClosingFormPage />} />
         </Route>
 
         {/* Station Master Portal */}
@@ -90,6 +93,7 @@ export default function App() {
         <Route path="/browse" element={<ProtectedRoute><BrowsePage /></ProtectedRoute>} />
         <Route path="/sop/:id" element={<ProtectedRoute><SOPViewPage /></ProtectedRoute>} />
         <Route path="/safety-notices" element={<ProtectedRoute><SafetyNoticesBrowsePage /></ProtectedRoute>} />
+        <Route path="/opening-closing" element={<StationMasterRoute><OpeningClosingSubmitPage /></StationMasterRoute>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

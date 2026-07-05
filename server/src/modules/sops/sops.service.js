@@ -8,7 +8,7 @@ async function safeUserId(userId) {
   return user ? userId : null;
 }
 
-async function getAll({ status, categoryId, docType, search, page = 1, limit = 20 } = {}) {
+async function getAll({ status, categoryId, docType, search, page = 1, limit = 20 } = {}, user = null) {
   const skip = (page - 1) * limit;
   const where = {
     ...(status && { status }),
@@ -16,6 +16,14 @@ async function getAll({ status, categoryId, docType, search, page = 1, limit = 2
     ...(docType && { docType }),
     ...(search && { title: { contains: search, mode: 'insensitive' } }),
   };
+
+  if (user && !user.roles.includes('admin') && !user.roles.includes('station_manager') && !user.roles.includes('transport_manager')) {
+    where.roleVisibility = {
+      some: {
+        role: { name: { in: user.roles } }
+      }
+    };
+  }
   const [sops, total] = await Promise.all([
     prisma.sop.findMany({
       where,
@@ -38,6 +46,7 @@ async function getById(id) {
     include: {
       category: true,
       owner: { select: { id: true, fullName: true, email: true } },
+      roleVisibility: { include: { role: true } },
       versions: {
         where: { isCurrent: true },
         take: 1,
@@ -59,6 +68,8 @@ async function getById(id) {
 
   // Delete versions relation and assign steps to match the expected format
   delete sop.versions;
+  sop.permittedRoles = sop.roleVisibility?.map(rv => rv.role.name) || [];
+  delete sop.roleVisibility;
   sop.steps = steps.map(st => ({
     ...st,
     attentionPoints: st.attentionPoints ? JSON.parse(st.attentionPoints) : [],
@@ -68,7 +79,7 @@ async function getById(id) {
   return sop;
 }
 
-async function create({ title, referenceCode, categoryId, ownerId, docType, tags, steps = [], contentJson }, userId) {
+async function create({ title, referenceCode, categoryId, ownerId, docType, tags, steps = [], contentJson, permittedRoles = [] }, userId) {
   const safeId = await safeUserId(userId);
   const safeOwner = await safeUserId(ownerId || userId);
 
@@ -84,6 +95,15 @@ async function create({ title, referenceCode, categoryId, ownerId, docType, tags
       currentVersion: '1.0',
     },
   });
+
+  if (permittedRoles.length > 0) {
+    const roles = await prisma.role.findMany({ where: { name: { in: permittedRoles } } });
+    if (roles.length > 0) {
+      await prisma.sopRoleVisibility.createMany({
+        data: roles.map(r => ({ sopId: sop.id, roleId: r.id }))
+      });
+    }
+  }
 
   const version = await prisma.sopVersion.create({
     data: {
@@ -125,7 +145,7 @@ async function create({ title, referenceCode, categoryId, ownerId, docType, tags
   return getById(sop.id);
 }
 
-async function update(id, { title, categoryId, ownerId, docType, tags, steps, contentJson, bumpType, changeSummary }, userId) {
+async function update(id, { title, categoryId, ownerId, docType, tags, steps, contentJson, bumpType, changeSummary, permittedRoles }, userId) {
   const existing = await getById(id);
   const newVersion = bumpVersion(existing.currentVersion, bumpType || 'minor');
   const safeId = await safeUserId(userId);
@@ -172,9 +192,19 @@ async function update(id, { title, categoryId, ownerId, docType, tags, steps, co
     },
   });
 
+  const data = { title, categoryId, ownerId, docType, tags, currentVersion: newVersion, updatedAt: new Date() };
+
+  if (permittedRoles !== undefined) {
+    const roles = await prisma.role.findMany({ where: { name: { in: permittedRoles } } });
+    data.roleVisibility = {
+      deleteMany: {},
+      create: roles.map(r => ({ roleId: r.id }))
+    };
+  }
+
   return prisma.sop.update({
     where: { id },
-    data: { title, categoryId, ownerId, docType, tags, currentVersion: newVersion, updatedAt: new Date() },
+    data,
     include: { category: true, owner: { select: { id: true, fullName: true } } },
   });
 }
@@ -248,4 +278,21 @@ async function restoreVersion(sopId, targetVersion, userId) {
   return prisma.sop.update({ where: { id: sopId }, data: { currentVersion: newVersion } });
 }
 
-module.exports = { getAll, getById, create, update, publish, archive, restore, remove, getVersions, getChangelog, restoreVersion };
+async function acknowledgeStep(sopId, stepId, version, userId) {
+  const safeId = await safeUserId(userId);
+  if (!safeId) throw Object.assign(new Error('User not found'), { status: 404 });
+
+  return prisma.stepAcknowledgment.create({
+    data: {
+      sopId,
+      stepId,
+      version: version || '1.0',
+      userId: safeId,
+    },
+    include: {
+      user: { select: { id: true, fullName: true, email: true } },
+    },
+  });
+}
+
+module.exports = { getAll, getById, create, update, publish, archive, restore, remove, getVersions, getChangelog, restoreVersion, acknowledgeStep };

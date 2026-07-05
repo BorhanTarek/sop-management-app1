@@ -4,19 +4,21 @@ const { signToken } = require('../../utils/jwt');
 
 async function login(email, password) {
   const user = await prisma.user.findFirst({
-    where: {
-      email: {
-        equals: email,
-      },
+    where: { email: { equals: email } },
+    include: {
+      roles: { include: { role: true } },
+      stationAssignments: { include: { station: { select: { id: true, name: true, stationCode: true } } } },
     },
-    include: { roles: { include: { role: true } } },
   });
-  
-  // If not found with exact match, do a fallback case-insensitive search
+
+  // Fallback case-insensitive search
   let matchedUser = user;
   if (!matchedUser) {
     const allUsers = await prisma.user.findMany({
-      include: { roles: { include: { role: true } } },
+      include: {
+        roles: { include: { role: true } },
+        stationAssignments: { include: { station: { select: { id: true, name: true, stationCode: true } } } },
+      },
     });
     matchedUser = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
   }
@@ -29,6 +31,9 @@ async function login(email, password) {
     throw Object.assign(new Error('Invalid credentials'), { status: 401 });
   }
   const roles = matchedUser.roles.map((ur) => ur.role.name);
+  const stationIds = matchedUser.stationAssignments.map((sa) => sa.stationId);
+  const assignedStations = matchedUser.stationAssignments.map((sa) => sa.station);
+
   const token = signToken({ userId: matchedUser.id, email: matchedUser.email, roles });
   return {
     token,
@@ -38,8 +43,11 @@ async function login(email, password) {
       fullName: matchedUser.fullName,
       department: matchedUser.department,
       roles,
+      stationIds,
+      assignedStations,
     },
   };
 }
 
 module.exports = { login };
+

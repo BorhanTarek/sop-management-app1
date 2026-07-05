@@ -1,184 +1,77 @@
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
-
 const prisma = new PrismaClient();
 
+const LINE3_STATIONS = [
+  { name: 'Adly Mansour',         nameAr: 'عدلي منصور',           stationCode: 'L3-01', sortOrder: 1 },
+  { name: 'El Haykestep',         nameAr: 'الهايكستب',            stationCode: 'L3-02', sortOrder: 2 },
+  { name: 'Omar Ibn El Khattab',  nameAr: 'عمر بن الخطاب',        stationCode: 'L3-03', sortOrder: 3 },
+  { name: 'Koleyet El Zeraa',     nameAr: 'كلية الزراعة',          stationCode: 'L3-04', sortOrder: 4 },
+  { name: 'El Ahram',             nameAr: 'الأهرام',               stationCode: 'L3-05', sortOrder: 5 },
+  { name: 'Heliopolis',           nameAr: 'مصر الجديدة',           stationCode: 'L3-06', sortOrder: 6 },
+  { name: 'Haroun',               nameAr: 'هارون',                 stationCode: 'L3-07', sortOrder: 7 },
+  { name: 'Stadium',              nameAr: 'الاستاد',               stationCode: 'L3-08', sortOrder: 8 },
+  { name: 'Fair Grounds',         nameAr: 'أرض المعارض',           stationCode: 'L3-09', sortOrder: 9 },
+  { name: 'Abbassia',             nameAr: 'العباسية',              stationCode: 'L3-10', sortOrder: 10 },
+  { name: 'Abdou Basha',          nameAr: 'عبده باشا',             stationCode: 'L3-11', sortOrder: 11 },
+  { name: 'El Geyoushia',         nameAr: 'الجيوشية',              stationCode: 'L3-12', sortOrder: 12 },
+  { name: 'Hadayeq El Zaytoun',   nameAr: 'حدائق الزيتون',         stationCode: 'L3-13', sortOrder: 13 },
+  { name: 'Helmeyet El Zaytoun',  nameAr: 'حلمية الزيتون',         stationCode: 'L3-14', sortOrder: 14 },
+  { name: 'El Montaza',           nameAr: 'المنتزه',               stationCode: 'L3-15', sortOrder: 15 },
+  { name: 'Ain Shams',            nameAr: 'عين شمس',               stationCode: 'L3-16', sortOrder: 16 },
+  { name: 'El Matareyya',         nameAr: 'المطرية',               stationCode: 'L3-17', sortOrder: 17 },
+  { name: 'Khalafawy',            nameAr: 'خلفاوي',                stationCode: 'L3-18', sortOrder: 18 },
+  { name: 'St. Teresa',           nameAr: 'سانت تريزا',            stationCode: 'L3-19', sortOrder: 19 },
+  { name: 'Rod El Farag Axis',    nameAr: 'محور روض الفرج',        stationCode: 'L3-20', sortOrder: 20 },
+  { name: 'Masarra',              nameAr: 'مسرة',                  stationCode: 'L3-21', sortOrder: 21 },
+  { name: 'Al Khalig Al Masry',   nameAr: 'الخليج المصري',         stationCode: 'L3-22', sortOrder: 22 },
+  { name: 'Bab El Shaaria',       nameAr: 'باب الشعرية',           stationCode: 'L3-23', sortOrder: 23 },
+  { name: 'Attaba',               nameAr: 'العتبة',                stationCode: 'L3-24', sortOrder: 24 },
+  { name: 'Nasser',               nameAr: 'ناصر',                  stationCode: 'L3-25', sortOrder: 25 },
+  { name: 'Maspero',              nameAr: 'ماسبيرو',               stationCode: 'L3-26', sortOrder: 26 },
+  { name: 'Safaa Hegazy',         nameAr: 'صفاء حجازي',            stationCode: 'L3-27', sortOrder: 27 },
+  { name: 'Kit Kat',              nameAr: 'كيت كات',               stationCode: 'L3-28', sortOrder: 28 },
+];
+
+const NEW_ROLES = [
+  { name: 'admin', description: 'Administrator — full access' },
+  { name: 'station_manager', description: 'Station Manager — view, edit, add station SOPs' },
+  { name: 'station_master', description: 'Station Master — restricted to assigned stations only' },
+  { name: 'transport_manager', description: 'Transport Manager — edit, add, view SOPs' },
+  { name: 'driver', description: 'Driver — viewer access to SOPs' },
+  { name: 'occ', description: 'OCC — viewer access to SOPs' },
+];
+
 async function main() {
-  console.log('🌱 Seeding database...');
-
-  // Create roles
-  const adminRole = await prisma.role.upsert({
-    where: { name: 'admin' },
-    update: {},
-    create: { name: 'admin', description: 'Full system access' },
-  });
-
-  await prisma.role.upsert({
-    where: { name: 'editor' },
-    update: {},
-    create: { name: 'editor', description: 'Can create and edit SOPs' },
-  });
-
-  await prisma.role.upsert({
-    where: { name: 'viewer' },
-    update: {},
-    create: { name: 'viewer', description: 'Read-only access to published SOPs' },
-  });
-
-  console.log('✅ Roles created');
-
-  // Create admin user
-  const hashedPassword = await bcrypt.hash('123123', 10);
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'Admin' },
-    update: {},
-    create: {
-      email: 'Admin',
-      passwordHash: hashedPassword,
-      fullName: 'System Administrator',
-      department: 'IT',
-    },
-  });
-
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: adminUser.id, roleId: adminRole.id } },
-    update: {},
-    create: { userId: adminUser.id, roleId: adminRole.id },
-  });
-
-  console.log('✅ Admin user created: Admin / 123123');
-
-  // Create root categories
-  const opsCategory = await prisma.category.upsert({
-    where: { slug: 'transport-management' },
-    update: {},
-    create: {
-      name: 'Transport Management',
-      slug: 'transport-management',
-      description: 'All transport and logistics SOPs',
-      icon: '🚌',
-      sortOrder: 1,
-      createdById: adminUser.id,
-    },
-  });
-
-  const csCategory = await prisma.category.upsert({
-    where: { slug: 'territory-customer-service' },
-    update: {},
-    create: {
-      name: 'Territory Customer Service',
-      slug: 'territory-customer-service',
-      description: 'Customer service procedures',
-      icon: '🤝',
-      sortOrder: 2,
-      createdById: adminUser.id,
-    },
-  });
-
-  const exCategory = await prisma.category.upsert({
-    where: { slug: 'operational-excellence' },
-    update: {},
-    create: {
-      name: 'Operational Excellence',
-      slug: 'operational-excellence',
-      description: 'Operational best practices',
-      icon: '⭐',
-      sortOrder: 3,
-      createdById: adminUser.id,
-    },
-  });
-
-  // Sub-category: Drivers Management
-  const driversCategory = await prisma.category.upsert({
-    where: { slug: 'drivers-management' },
-    update: {},
-    create: {
-      name: 'Drivers Management',
-      slug: 'drivers-management',
-      parentId: opsCategory.id,
-      sortOrder: 1,
-      createdById: adminUser.id,
-    },
-  });
-
-  console.log('✅ Categories created');
-
-  // Sample SOP: Door Failure
-  const doorFailureSop = await prisma.sop.upsert({
-    where: { referenceCode: 'TAC-RTM-002-1-1-3' },
-    update: {},
-    create: {
-      title: 'Door Failure',
-      referenceCode: 'TAC-RTM-002-1-1-3',
-      categoryId: driversCategory.id,
-      ownerId: adminUser.id,
-      docType: 'SOP',
-      status: 'published',
-      currentVersion: '1.0',
-      publishedAt: new Date(),
-    },
-  });
-
-  // Create first version with steps
-  const existing = await prisma.sopVersion.findFirst({
-    where: { sopId: doorFailureSop.id, version: '1.0' },
-  });
-
-  if (!existing) {
-    const steps = [
-      { stepNumber: 1, title: 'Make PA to passengers', stepType: 'action', refCode: 'WI-RTM-H11', sortOrder: 1 },
-      { stepNumber: 2, title: 'Inform the CCP', stepType: 'action', sortOrder: 2 },
-      { stepNumber: 3, title: 'Secure the cabin', stepType: 'action', refCode: 'WI-RTM-M1', sortOrder: 3 },
-      { stepNumber: 4, title: 'Head to the affected car(s)', stepType: 'action', sortOrder: 4 },
-      { stepNumber: 5, title: 'Inspect the affected door', stepType: 'action', sortOrder: 5 },
-      { stepNumber: 6, title: 'Any item blocking the door rail?', stepType: 'decision', sortOrder: 6 },
-      { stepNumber: 7, title: 'Isolate the door', stepType: 'action', refCode: 'WI-RTM-D14', sortOrder: 7 },
-      { stepNumber: 8, title: 'Remove the item', stepType: 'action', sortOrder: 8 },
-    ];
-
-    const contentJson = JSON.stringify({ steps });
-
-    const version = await prisma.sopVersion.create({
-      data: {
-        sopId: doorFailureSop.id,
-        version: '1.0',
-        contentJson,
-        isCurrent: true,
-        createdById: adminUser.id,
-      },
+  console.log('Seeding roles...');
+  
+  // Create or update the new exact set of roles
+  for (const role of NEW_ROLES) {
+    await prisma.role.upsert({
+      where: { name: role.name },
+      update: { description: role.description },
+      create: role,
     });
-
-    await prisma.changeLog.create({
-      data: {
-        sopId: doorFailureSop.id,
-        versionFrom: null,
-        versionTo: '1.0',
-        changeSummary: 'Initial version created',
-        changedById: adminUser.id,
-      },
-    });
-
-    // Create steps linked to version
-    for (const step of steps) {
-      await prisma.sopStep.create({
-        data: {
-          sopId: doorFailureSop.id,
-          versionId: version.id,
-          ...step,
-        },
-      });
-    }
   }
+  
+  // Remove old generic roles (editor, viewer) to enforce the new strict categories
+  await prisma.role.deleteMany({
+    where: { name: { in: ['editor', 'viewer'] } }
+  });
+  
+  console.log('New role system seeded');
 
-  console.log('✅ Sample SOP created: Door Failure');
-  console.log('\n🎉 Seeding complete!');
+  console.log('Seeding Cairo Metro Line 3 stations...');
+
+  for (const station of LINE3_STATIONS) {
+    await prisma.station.upsert({
+      where: { stationCode: station.stationCode },
+      update: { name: station.name, nameAr: station.nameAr, sortOrder: station.sortOrder },
+      create: { ...station, lineCode: 'L3', isActive: true },
+    });
+  }
+  console.log(`${LINE3_STATIONS.length} Cairo Line 3 stations seeded`);
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .catch((e) => { console.error(e); process.exit(1); })
+  .finally(() => prisma.$disconnect());

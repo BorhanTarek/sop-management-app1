@@ -11,7 +11,10 @@ async function authenticate(req, res, next) {
     const decoded = verifyToken(token);
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      include: { roles: { include: { role: true } } },
+      include: {
+        roles: { include: { role: true } },
+        stationAssignments: { select: { stationId: true } },
+      },
     });
     if (!user || !user.isActive) {
       return res.status(401).json({ error: 'User not found or inactive' });
@@ -21,6 +24,7 @@ async function authenticate(req, res, next) {
       email: user.email,
       fullName: user.fullName,
       roles: user.roles.map((ur) => ur.role.name),
+      stationIds: user.stationAssignments.map((sa) => sa.stationId),
     };
     next();
   } catch (err) {
@@ -29,3 +33,4 @@ async function authenticate(req, res, next) {
 }
 
 module.exports = { authenticate };
+

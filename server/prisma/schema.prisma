@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -24,6 +24,10 @@ model User {
   createdSopVersions SopVersion[]
   changeLogs   ChangeLog[]
   createdCategories Category[]
+  stepAcknowledgments StepAcknowledgment[]
+  stationAssignments  UserStation[]
+  sessions            SopSession[]
+  workInstructionAcknowledgments WorkInstructionAcknowledgment[]
 
   @@map("users")
 }
@@ -34,6 +38,8 @@ model Role {
   description String?
 
   userRoles UserRole[]
+  sopRoleVisibility SopRoleVisibility[]
+  workInstructionRoleVisibility WorkInstructionRoleVisibility[]
 
   @@map("roles")
 }
@@ -87,6 +93,10 @@ model Sop {
   versions   SopVersion[]
   changeLogs ChangeLog[]
   steps      SopStep[]
+  stepAcknowledgments StepAcknowledgment[]
+  stationSops         StationSop[]
+  sessions            SopSession[]
+  roleVisibility      SopRoleVisibility[]
 
   @@map("sops")
 }
@@ -145,4 +155,145 @@ model SopStep {
   children  SopStep[]   @relation("StepTree")
 
   @@map("sop_steps")
+}
+
+model StepAcknowledgment {
+  id             String   @id @default(uuid())
+  sopId          String
+  stepId         String
+  userId         String
+  version        String
+  acknowledgedAt DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sop            Sop      @relation(fields: [sopId], references: [id], onDelete: Cascade)
+
+  @@map("step_acknowledgments")
+}
+
+// ═══════════════════════════════════════════════════════
+// STATION PORTAL MODELS
+// ═══════════════════════════════════════════════════════
+
+model Station {
+  id          String   @id @default(uuid())
+  name        String
+  nameAr      String?  // Arabic name
+  stationCode String   @unique  // e.g. L3-001
+  lineCode    String   @default("L3")  // Cairo Metro Line 3
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  userAssignments UserStation[]
+  stationSops     StationSop[]
+  sessions        SopSession[]
+
+  @@map("stations")
+}
+
+model UserStation {
+  userId    String
+  stationId String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  station   Station @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, stationId])
+  @@map("user_stations")
+}
+
+model StationSop {
+  id          String  @id @default(uuid())
+  stationId   String
+  sopId       String
+  procedureType String  // "opening" | "closing"
+
+  station     Station @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  sop         Sop     @relation(fields: [sopId], references: [id], onDelete: Cascade)
+
+  @@unique([stationId, procedureType])
+  @@map("station_sops")
+}
+
+model SopSession {
+  id            String    @id @default(uuid())
+  stationId     String
+  sopId         String
+  userId        String
+  procedureType String    // "opening" | "closing"
+  status        String    @default("in_progress")  // "in_progress" | "completed" | "abandoned"
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  shiftDate     String    // YYYY-MM-DD for grouping
+
+  station       Station         @relation(fields: [stationId], references: [id])
+  sop           Sop             @relation(fields: [sopId], references: [id])
+  user          User            @relation(fields: [userId], references: [id])
+  stepLogs      SopSessionStep[]
+
+  @@map("sop_sessions")
+}
+
+model SopSessionStep {
+  id            String   @id @default(uuid())
+  sessionId     String
+  stepId        String
+  stepTitle     String?
+  stepType      String?  // action | safety_critical | decision | reference
+  acknowledgedAt DateTime @default(now())
+  branchChoice  String?  // "yes" | "no" for decision steps
+
+  session       SopSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("sop_session_steps")
+}
+
+model SopRoleVisibility {
+  sopId  String
+  roleId Int
+
+  sop  Sop  @relation(fields: [sopId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([sopId, roleId])
+  @@map("sop_role_visibility")
+}
+
+model WorkInstruction {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  imageUrl    String?
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  acknowledgments WorkInstructionAcknowledgment[]
+  roleVisibility WorkInstructionRoleVisibility[]
+
+  @@map("work_instructions")
+}
+
+model WorkInstructionAcknowledgment {
+  id                String   @id @default(uuid())
+  workInstructionId String
+  userId            String
+  acknowledgedAt    DateTime @default(now())
+
+  workInstruction   WorkInstruction @relation(fields: [workInstructionId], references: [id], onDelete: Cascade)
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workInstructionId, userId])
+  @@map("work_instruction_acknowledgments")
+}
+
+model WorkInstructionRoleVisibility {
+  workInstructionId String
+  roleId            Int
+
+  workInstruction WorkInstruction @relation(fields: [workInstructionId], references: [id], onDelete: Cascade)
+  role            Role            @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([workInstructionId, roleId])
+  @@map("work_instruction_role_visibility")
 }

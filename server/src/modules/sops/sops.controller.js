@@ -1,7 +1,7 @@
 const svc = require('./sops.service');
 
 async function list(req, res, next) {
-  try { res.json(await svc.getAll(req.query)); } catch (err) { next(err); }
+  try { res.json(await svc.getAll(req.query, req.user)); } catch (err) { next(err); }
 }
 async function getOne(req, res, next) {
   try { res.json(await svc.getById(req.params.id)); } catch (err) { next(err); }
@@ -33,5 +33,14 @@ async function changelog(req, res, next) {
 async function restoreVersion(req, res, next) {
   try { res.json(await svc.restoreVersion(req.params.id, req.params.version, req.user.id)); } catch (err) { next(err); }
 }
+async function acknowledgeStep(req, res, next) {
+  try {
+    const { id, stepId } = req.params;
+    const { version } = req.body;
+    res.status(201).json(await svc.acknowledgeStep(id, stepId, version, req.user.id));
+  } catch (err) {
+    next(err);
+  }
+}
 
-module.exports = { list, getOne, create, update, publish, archive, restoreSop, remove, versions, changelog, restoreVersion };
+module.exports = { list, getOne, create, update, publish, archive, restoreSop, remove, versions, changelog, restoreVersion, acknowledgeStep };

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, Loader, Upload, X } from 'lucide-react';
-import { safetyNoticeService } from '../../services/services';
+import { safetyNoticeService, getImageUrl } from '../../services/services';
 
 const PERMITTED_ROLES = ['station_manager', 'station_master', 'transport_manager', 'driver', 'occ'];
 
@@ -222,13 +222,13 @@ export default function SafetyNoticeEditPage() {
               <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
                 {isPdf ? (
                   <iframe 
-                    src={imagePreview} 
+                    src={getImageUrl(imagePreview)} 
                     title="PDF Attachment Preview" 
                     style={{ width: '100%', height: 240, border: 'none', background: '#0a0b0d' }}
                   />
                 ) : (
                   <img 
-                    src={imagePreview} 
+                    src={getImageUrl(imagePreview)} 
                     alt="Selected Preview" 
                     style={{ width: '100%', maxHeight: 220, objectFit: 'contain', background: '#0a0b0d' }} 
                   />

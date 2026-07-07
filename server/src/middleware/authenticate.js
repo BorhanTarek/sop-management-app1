@@ -25,6 +25,8 @@ async function authenticate(req, res, next) {
       fullName: user.fullName,
       roles: user.roles.map((ur) => ur.role.name),
       stationIds: user.stationAssignments.map((sa) => sa.stationId),
+      hasSetSignature: user.hasSetSignature,
+      hasChangedPassword: user.hasChangedPassword,
     };
     next();
   } catch (err) {

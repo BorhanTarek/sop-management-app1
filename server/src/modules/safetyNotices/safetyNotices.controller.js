@@ -282,6 +282,7 @@ exports.logs = async (req, res, next) => {
           select: {
             fullName: true,
             email: true,
+            signatureData: true,
             roles: {
               include: {
                 role: true
@@ -299,6 +300,7 @@ exports.logs = async (req, res, next) => {
       user: {
         fullName: ack.user.fullName,
         email: ack.user.email,
+        signatureData: ack.user.signatureData,
         roles: ack.user.roles.map(ur => ur.role.name)
       }
     }));

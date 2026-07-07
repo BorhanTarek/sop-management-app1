@@ -45,6 +45,8 @@ async function login(email, password) {
       roles,
       stationIds,
       assignedStations,
+      hasSetSignature: matchedUser.hasSetSignature,
+      hasChangedPassword: matchedUser.hasChangedPassword,
     },
   };
 }

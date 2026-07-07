@@ -1,6 +1,39 @@
 const prisma = require('../../config/db');
 
 /**
+ * Start a viewer-portal SOP session (no station required).
+ * Called when any user starts the Wizard Guide from the Browse/SOP view page.
+ */
+async function startViewerSession(userId, sopId) {
+  const sop = await prisma.sop.findUnique({ where: { id: sopId } });
+  if (!sop) throw Object.assign(new Error('SOP not found'), { status: 404 });
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Abandon any previous in-progress viewer session for this user+sop today
+  await prisma.sopSession.updateMany({
+    where: { userId, sopId, source: 'viewer', shiftDate: today, status: 'in_progress' },
+    data: { status: 'abandoned' },
+  });
+
+  const session = await prisma.sopSession.create({
+    data: {
+      sopId,
+      userId,
+      procedureType: 'viewer',
+      source: 'viewer',
+      shiftDate: today,
+      status: 'in_progress',
+    },
+    include: {
+      sop: { select: { id: true, title: true, referenceCode: true } },
+    },
+  });
+
+  return session;
+}
+
+/**
  * Start a new SOP execution session for a station master.
  * Validates that the user is assigned to the requested station.
  */
@@ -128,4 +161,43 @@ async function listSessions({ stationId, date, status, userId: filterUserId } = 
   });
 }
 
-module.exports = { startSession, acknowledgeStep, completeSession, getSession, listSessions };
+/**
+ * Admin: rich SOPs wizard log viewer — full step-by-step detail per session.
+ */
+async function getSopLogs({ sopId, userId: filterUserId, dateFrom, dateTo, status, search } = {}) {
+  return prisma.sopSession.findMany({
+    where: {
+      ...(sopId && { sopId }),
+      ...(filterUserId && { userId: filterUserId }),
+      ...(status && { status }),
+      ...(dateFrom && dateTo && { shiftDate: { gte: dateFrom, lte: dateTo } }),
+      ...(dateFrom && !dateTo && { shiftDate: { gte: dateFrom } }),
+      ...(!dateFrom && dateTo && { shiftDate: { lte: dateTo } }),
+      ...(search && {
+        OR: [
+          { user: { fullName: { contains: search } } },
+          { sop: { title: { contains: search } } },
+        ],
+      }),
+    },
+    include: {
+      station: { select: { id: true, name: true, stationCode: true } },
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          department: true,
+          signatureData: true,
+          roles: { include: { role: true } },
+        },
+      },
+      sop: { select: { id: true, title: true, referenceCode: true, currentVersion: true } },
+      stepLogs: { orderBy: { acknowledgedAt: 'asc' } },
+    },
+    orderBy: { startedAt: 'desc' },
+    take: 500,
+  });
+}
+
+module.exports = { startSession, startViewerSession, acknowledgeStep, completeSession, getSession, listSessions, getSopLogs };

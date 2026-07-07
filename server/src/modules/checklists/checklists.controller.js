@@ -107,7 +107,7 @@ exports.submitChecklist = async (req, res) => {
       include: {
         items: true,
         station: true,
-        user: true
+        user: { select: { id: true, fullName: true, email: true, signatureData: true } }
       }
     });
 
@@ -124,7 +124,7 @@ exports.getLogs = async (req, res) => {
     const logs = await prisma.checklistSubmission.findMany({
       orderBy: { submittedAt: 'desc' },
       include: {
-        user: { select: { id: true, fullName: true, email: true } },
+        user: { select: { id: true, fullName: true, email: true, signatureData: true } },
         station: { select: { id: true, name: true, stationCode: true, lineCode: true } },
         items: true
       }

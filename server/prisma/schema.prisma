@@ -5,19 +5,23 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  fullName     String
-  department   String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  passwordHash       String
+  fullName           String
+  department         String?
+  isActive           Boolean   @default(true)
+  hasSetSignature    Boolean   @default(false)
+  hasChangedPassword Boolean   @default(false)
+  signatureData      String?   // Base64 PNG of user's drawn signature
+  signatureSetAt     DateTime? // Audit timestamp of last signature update
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   roles        UserRole[]
   ownedSops    Sop[]        @relation("SopOwner")
@@ -221,16 +225,17 @@ model StationSop {
 
 model SopSession {
   id            String    @id @default(uuid())
-  stationId     String
+  stationId     String?   // null for viewer-portal sessions
   sopId         String
   userId        String
-  procedureType String    // "opening" | "closing"
+  procedureType String    // "opening" | "closing" | "viewer"
+  source        String    @default("station")  // "station" | "viewer"
   status        String    @default("in_progress")  // "in_progress" | "completed" | "abandoned"
   startedAt     DateTime  @default(now())
   completedAt   DateTime?
   shiftDate     String    // YYYY-MM-DD for grouping
 
-  station       Station         @relation(fields: [stationId], references: [id])
+  station       Station?        @relation(fields: [stationId], references: [id])
   sop           Sop             @relation(fields: [sopId], references: [id])
   user          User            @relation(fields: [userId], references: [id])
   stepLogs      SopSessionStep[]

@@ -7,6 +7,13 @@ async function start(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function startViewer(req, res, next) {
+  try {
+    const { sopId } = req.body;
+    res.status(201).json(await svc.startViewerSession(req.user.id, sopId));
+  } catch (err) { next(err); }
+}
+
 async function acknowledge(req, res, next) {
   try {
     const { stepId, stepTitle, stepType, branchChoice } = req.body;
@@ -34,4 +41,10 @@ async function list(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { start, acknowledge, complete, getOne, list };
+async function sopLogs(req, res, next) {
+  try {
+    res.json(await svc.getSopLogs(req.query));
+  } catch (err) { next(err); }
+}
+
+module.exports = { start, startViewer, acknowledge, complete, getOne, list, sopLogs };

@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore';
 import ratpLogo from '../../assets/RDMC LOGO.jpg';
 import mobilityLogo from '../../assets/Logo-Mobility-Cairo.png';
 import { translations } from '../../utils/translations';
+import AccountSettingsModal from '../../components/signature/AccountSettingsModal';
 
 export default function BrowsePage() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function BrowsePage() {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   // Language state
   const [lang, setLang] = useState(localStorage.getItem('portal_lang') || 'en');
@@ -149,6 +151,22 @@ export default function BrowsePage() {
               <Settings size={13} /> Admin
             </button>
           )}
+          {/* User avatar — opens Account Settings */}
+          <button
+            onClick={() => setAccountOpen(true)}
+            title={`${user?.fullName} — Account Settings`}
+            style={{
+              width: 34, height: 34, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.2)',
+              border: '2px solid rgba(255,255,255,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            {user?.fullName?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || '?'}
+          </button>
+
           <button onClick={() => { logout(); navigate('/login'); }} style={{
             background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
             borderRadius: 'var(--radius-sm)', padding: '6px 12px',
@@ -158,6 +176,9 @@ export default function BrowsePage() {
           </button>
         </div>
       </div>
+
+      {/* Account Settings slide-in panel */}
+      <AccountSettingsModal isOpen={accountOpen} onClose={() => setAccountOpen(false)} />
 
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px' }}>
         

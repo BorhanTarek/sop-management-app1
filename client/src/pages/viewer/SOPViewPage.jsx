@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, User, GitBranch, Edit, CheckCircle, XCircle, ArrowRight, Play, Award, RotateCcw, AlertTriangle, ShieldAlert, FileText, Check } from 'lucide-react';
-import { sopService } from '../../services/services';
+import { sopService, sessionService } from '../../services/services';
 import { useAuthStore } from '../../store/authStore';
 import { translations } from '../../utils/translations';
 
@@ -690,6 +690,7 @@ export default function SOPViewPage() {
   const [wizardCompleted, setWizardCompleted] = useState(false);
   const [historyLogs, setHistoryLogs] = useState([]); // local trace of step acknowledgments
   const [submittingLog, setSubmittingLog] = useState(false);
+  const [wizardSessionId, setWizardSessionId] = useState(null); // backend session id for this wizard run
 
   useEffect(() => {
     sopService.get(id).then(r => setSop(r.data)).finally(() => setLoading(false));
@@ -733,8 +734,34 @@ export default function SOPViewPage() {
 
     setSubmittingLog(true);
     try {
-      // Send compliance logging request to backend API
-      const response = await sopService.acknowledgeStep(sop.id, activeStep.id || activeStep.stepNumber.toString(), sop.currentVersion);
+      // Create a backend session the first time Acknowledge is clicked
+      let sessionId = wizardSessionId;
+      if (!sessionId) {
+        try {
+          const sessionRes = await sessionService.startViewerSession(sop.id);
+          sessionId = sessionRes.data.id;
+          setWizardSessionId(sessionId);
+        } catch (e) {
+          console.error('Failed to start wizard session:', e);
+        }
+      }
+
+      // Log the step acknowledgment to the backend session
+      if (sessionId) {
+        try {
+          await sessionService.acknowledge(sessionId, {
+            stepId: activeStep.id || activeStep.stepNumber?.toString() || 'unknown',
+            stepTitle: activeStep.title || '',
+            stepType: activeStep.stepType || 'action',
+            branchChoice: selectedDecision || null,
+          });
+        } catch (e) {
+          console.error('Failed to log step to session:', e);
+        }
+      }
+
+      // Also send the per-step compliance acknowledgment (StepAcknowledgment table)
+      const response = await sopService.acknowledgeStep(sop.id, activeStep.id || activeStep.stepNumber?.toString(), sop.currentVersion);
       const logRecord = response.data;
       setHistoryLogs(prev => [...prev, {
         stepTitle: activeStep.title,
@@ -744,7 +771,7 @@ export default function SOPViewPage() {
       }]);
     } catch (err) {
       console.error('Error logging acknowledgment to server:', err);
-      // Fallback local logging in case of offline/auth issues
+      // Fallback local logging
       setHistoryLogs(prev => [...prev, {
         stepTitle: activeStep.title,
         stepType: activeStep.stepType,
@@ -806,6 +833,10 @@ export default function SOPViewPage() {
       setSelectedDecision(null);
       setIsAcknowledged(false);
     } else {
+      // All steps done — complete the backend session
+      if (wizardSessionId) {
+        sessionService.complete(wizardSessionId).catch(e => console.error('Failed to complete session:', e));
+      }
       setWizardCompleted(true);
     }
   };
@@ -818,6 +849,7 @@ export default function SOPViewPage() {
     setIsAcknowledged(false);
     setWizardCompleted(false);
     setHistoryLogs([]);
+    setWizardSessionId(null); // reset so a new session is created on next acknowledge
   };
 
   // Progress calculations

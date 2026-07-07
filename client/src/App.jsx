@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import SignatureSetupModal from './components/signature/SignatureSetupModal';
 
 import LoginPage from './pages/auth/LoginPage';
 import AdminLayout from './components/layout/AdminLayout';
@@ -10,6 +11,7 @@ import CategoriesPage from './pages/admin/CategoriesPage';
 import SOPsPage from './pages/admin/SOPsPage';
 import SOPCreatePage from './pages/admin/SOPCreatePage';
 import SOPEditPage from './pages/admin/SOPEditPage';
+import SOPLogsPage from './pages/admin/SOPLogsPage';
 import BrowsePage from './pages/viewer/BrowsePage';
 import SOPViewPage from './pages/viewer/SOPViewPage';
 import StationPortal from './pages/station/StationPortal';
@@ -22,6 +24,26 @@ import SafetyNoticeLogsPage from './pages/admin/SafetyNoticeLogsPage';
 import SafetyNoticesBrowsePage from './pages/viewer/SafetyNoticesBrowsePage';
 import OpeningClosingFormPage from './pages/admin/OpeningClosingFormPage';
 import OpeningClosingSubmitPage from './pages/viewer/OpeningClosingSubmitPage';
+
+/**
+ * SignatureGate — wraps all authenticated content.
+ * If the logged-in user has not yet set their signature,
+ * renders the mandatory full-screen SignatureSetupModal on top.
+ */
+function SignatureGate({ children }) {
+  const { user, loading } = useAuthStore();
+  if (loading) return null;
+  // Gate authenticated users who haven't set their signature OR haven't changed their password
+  if (user && (user.hasSetSignature === false || user.hasChangedPassword === false)) {
+    return (
+      <>
+        {children}
+        <SignatureSetupModal />
+      </>
+    );
+  }
+  return children;
+}
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuthStore();
@@ -63,41 +85,43 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
+      <SignatureGate>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
 
-        {/* Smart redirect from root */}
-        <Route path="/" element={<SmartRedirect />} />
+          {/* Smart redirect from root */}
+          <Route path="/" element={<SmartRedirect />} />
 
-        {/* Admin Dashboard */}
-        <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
-          <Route index element={<DashboardPage />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="categories" element={<CategoriesPage />} />
-          <Route path="sops" element={<SOPsPage />} />
-          <Route path="sops/new" element={<SOPCreatePage />} />
-          <Route path="sops/:id/edit" element={<SOPEditPage />} />
-          <Route path="compliance" element={<ComplianceDashboard />} />
-          <Route path="safety-notices" element={<SafetyNoticesPage />} />
-          <Route path="safety-notices/new" element={<SafetyNoticeCreatePage />} />
-          <Route path="safety-notices/:id/edit" element={<SafetyNoticeEditPage />} />
-          <Route path="safety-notices/:id/logs" element={<SafetyNoticeLogsPage />} />
-          <Route path="opening-closing" element={<OpeningClosingFormPage />} />
-        </Route>
+          {/* Admin Dashboard */}
+          <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
+            <Route index element={<DashboardPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="categories" element={<CategoriesPage />} />
+            <Route path="sops" element={<SOPsPage />} />
+            <Route path="sops/logs" element={<SOPLogsPage />} />
+            <Route path="sops/new" element={<SOPCreatePage />} />
+            <Route path="sops/:id/edit" element={<SOPEditPage />} />
+            <Route path="compliance" element={<ComplianceDashboard />} />
+            <Route path="safety-notices" element={<SafetyNoticesPage />} />
+            <Route path="safety-notices/new" element={<SafetyNoticeCreatePage />} />
+            <Route path="safety-notices/:id/edit" element={<SafetyNoticeEditPage />} />
+            <Route path="safety-notices/:id/logs" element={<SafetyNoticeLogsPage />} />
+            <Route path="opening-closing" element={<OpeningClosingFormPage />} />
+          </Route>
 
-        {/* Station Master Portal */}
-        <Route path="/station" element={<StationMasterRoute><StationPortal /></StationMasterRoute>} />
-        <Route path="/station/session/:sessionId" element={<StationMasterRoute><SessionWizardPage /></StationMasterRoute>} />
+          {/* Station Master Portal */}
+          <Route path="/station" element={<StationMasterRoute><StationPortal /></StationMasterRoute>} />
+          <Route path="/station/session/:sessionId" element={<StationMasterRoute><SessionWizardPage /></StationMasterRoute>} />
 
-        {/* Viewer Portal */}
-        <Route path="/browse" element={<ProtectedRoute><BrowsePage /></ProtectedRoute>} />
-        <Route path="/sop/:id" element={<ProtectedRoute><SOPViewPage /></ProtectedRoute>} />
-        <Route path="/safety-notices" element={<ProtectedRoute><SafetyNoticesBrowsePage /></ProtectedRoute>} />
-        <Route path="/opening-closing" element={<StationMasterRoute><OpeningClosingSubmitPage /></StationMasterRoute>} />
+          {/* Viewer Portal */}
+          <Route path="/browse" element={<ProtectedRoute><BrowsePage /></ProtectedRoute>} />
+          <Route path="/sop/:id" element={<ProtectedRoute><SOPViewPage /></ProtectedRoute>} />
+          <Route path="/safety-notices" element={<ProtectedRoute><SafetyNoticesBrowsePage /></ProtectedRoute>} />
+          <Route path="/opening-closing" element={<StationMasterRoute><OpeningClosingSubmitPage /></StationMasterRoute>} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </SignatureGate>
     </BrowserRouter>
   );
 }
-

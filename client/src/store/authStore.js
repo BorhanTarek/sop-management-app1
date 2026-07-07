@@ -31,6 +31,18 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  setOnboardingComplete: () => {
+    set(state => ({
+      user: state.user ? { ...state.user, hasSetSignature: true, hasChangedPassword: true } : state.user,
+    }));
+  },
+
+  setSignatureComplete: () => {
+    set(state => ({
+      user: state.user ? { ...state.user, hasSetSignature: true } : state.user,
+    }));
+  },
+
   isAdmin: () => get().user?.roles?.includes('admin'),
   canEditSops: () => {
     const roles = get().user?.roles || [];
@@ -43,4 +55,3 @@ export const useAuthStore = create((set, get) => ({
     return roles.includes('station_master') && !roles.includes('admin') && !roles.includes('station_manager') && !roles.includes('transport_manager');
   },
 }));
-

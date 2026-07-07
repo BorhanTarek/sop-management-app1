@@ -46,10 +46,14 @@ export const stationService = {
 
 export const sessionService = {
   start: (stationId, procedureType) => api.post('/sessions', { stationId, procedureType }),
+  startViewerSession: (sopId) => api.post('/sessions/viewer-session', { sopId }),
   get: (id) => api.get(`/sessions/${id}`),
   acknowledge: (id, data) => api.post(`/sessions/${id}/acknowledge`, data),
+  acknowledgeSessionStep: (id, stepId, data) => api.post(`/sessions/${id}/steps/${stepId}/acknowledge`, data),
   complete: (id) => api.post(`/sessions/${id}/complete`),
+  completeSession: (id, data) => api.post(`/sessions/${id}/complete`, data),
   list: (params) => api.get('/sessions', { params }),
+  sopLogs: (params) => api.get('/sessions/sop-logs', { params }),
 };
 
 export const safetyNoticeService = {
@@ -70,6 +74,12 @@ export const checklistService = {
   updateTask: (id, data) => api.put(`/checklists/tasks/${id}`, data),
   deleteTask: (id) => api.delete(`/checklists/tasks/${id}`),
   getLogs: () => api.get('/checklists/logs'),
+};
+
+export const signatureService = {
+  get: () => api.get('/users/me/signature'),
+  save: (signatureData) => api.post('/users/me/signature', { signatureData }),
+  saveOnboarding: (password, signatureData) => api.post('/users/me/onboarding', { password, signatureData }),
 };
 
 export const getImageUrl = (url) => {

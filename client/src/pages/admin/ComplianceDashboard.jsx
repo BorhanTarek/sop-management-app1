@@ -282,6 +282,225 @@ export default function ComplianceDashboard() {
     document.body.removeChild(link);
   };
 
+  // Prints the checklist log as a beautiful compliant PDF
+  const downloadPDF = (log) => {
+    const comp = getComplianceStatus(log);
+    const dateStr = new Date(log.submittedAt).toLocaleDateString('en-GB');
+    const timeStr = new Date(log.submittedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    
+    const printWindow = window.open('', '_blank', 'width=800,height=900');
+    if (!printWindow) {
+      alert("Please allow popups to download/print PDF.");
+      return;
+    }
+    
+    const itemsHtml = log.items && log.items.length > 0
+      ? log.items.map(item => {
+          const valText = item.value === 'true' ? '✓ Completed' : item.value === 'false' ? '✗ Uncompleted' : item.value;
+          const valColor = item.value === 'true' ? '#22c55e' : item.value === 'false' ? '#ef4444' : '#082823';
+          return `
+            <tr>
+              <td style="padding: 12px 16px; font-size: 14px; border-bottom: 1px solid #e2f0ec; text-align: left;">${item.taskText}</td>
+              <td style="padding: 12px 16px; font-size: 14px; border-bottom: 1px solid #e2f0ec; font-weight: bold; color: ${valColor}; text-align: left;">${valText}</td>
+            </tr>
+          `;
+        }).join('')
+      : '<tr><td colspan="2" style="text-align: center; color: #888; padding: 20px;">No items in this checklist.</td></tr>';
+
+    const signatureHtml = log.user?.signatureData
+      ? `
+        <div style="text-align: center; border: 1px solid #d2eae4; background: #f9fdfc; padding: 16px; border-radius: 8px; width: 240px; margin-left: auto;">
+          <p style="font-size: 12px; font-weight: bold; margin: 0 0 8px 0; color: #2d4d48;">Station Master Signature / توقيع مدير المحطة</p>
+          <img src="${log.user.signatureData}" alt="Signature" style="max-height: 70px; max-width: 200px; background: #ffffff; border: 1px solid #e2f0ec; padding: 4px; border-radius: 4px;" />
+          <p style="font-size: 11px; color: #22c55e; font-weight: bold; margin: 6px 0 0 0;">✓ System Verified Digitally</p>
+          <p style="font-size: 9px; color: #688883; margin: 2px 0 0 0;">${new Date(log.submittedAt).toLocaleString('en-GB')}</p>
+        </div>
+      `
+      : `
+        <div style="border: 1px dashed #ccc; padding: 20px; border-radius: 8px; text-align: center; width: 240px; margin-left: auto;">
+          <p style="color: #888; font-style: italic; margin: 0; font-size: 12px;">No digital signature on file / لا يوجد توقيع رقمي</p>
+        </div>
+      `;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>SOP Checklist Log - ${log.station?.name || 'Station'}</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #082823;
+            margin: 0;
+            padding: 40px;
+            line-height: 1.5;
+            background: #ffffff;
+          }
+          .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #00A591;
+            padding-bottom: 20px;
+          }
+          .header-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00A591;
+            margin: 0;
+          }
+          .header-subtitle {
+            font-size: 14px;
+            color: #688883;
+            margin: 4px 0 0 0;
+          }
+          .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            background: #f4fcf9;
+            border: 1px solid #d2eae4;
+            border-radius: 8px;
+          }
+          .meta-table td {
+            padding: 12px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid #d2eae4;
+          }
+          .meta-table tr:last-child td {
+            border-bottom: none;
+          }
+          .meta-label {
+            font-weight: bold;
+            color: #2d4d48;
+            width: 25%;
+          }
+          .meta-value {
+            color: #082823;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+          }
+          .items-table th {
+            background: #00A591;
+            color: #ffffff;
+            text-align: left;
+            padding: 10px 16px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+          }
+          .footer-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 50px;
+            page-break-inside: avoid;
+          }
+          .compliance-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: bold;
+          }
+          .badge-compliant {
+            background: rgba(34,197,94,0.15);
+            color: #22c55e;
+            border: 1px solid rgba(34,197,94,0.3);
+          }
+          .badge-noncompliant {
+            background: rgba(239,68,68,0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239,68,68,0.3);
+          }
+          @media print {
+            body {
+              padding: 0;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td style="text-align: left;">
+              <h1 class="header-title">CAIRO METRO LINE 3</h1>
+              <p class="header-subtitle">Station Operations Compliance Report / تقرير مطابقة تشغيل المحطة</p>
+            </td>
+            <td style="text-align: right; vertical-align: middle;">
+              <span style="font-weight: bold; font-size: 18px; color: #00A591;">RATP DEV</span>
+            </td>
+          </tr>
+        </table>
+
+        <table class="meta-table">
+          <tr>
+            <td class="meta-label">Station / المحطة:</td>
+            <td class="meta-value">${log.station?.name || ''} (${log.station?.stationCode || ''})</td>
+            <td class="meta-label">Procedure / الإجراء:</td>
+            <td class="meta-value" style="text-transform: capitalize; font-weight: bold;">
+              ${log.procedureType === 'opening' ? '☀️ Opening / فتح' : '🌙 Closing / إغلاق'}
+            </td>
+          </tr>
+          <tr>
+            <td class="meta-label">Station Master / مدير المحطة:</td>
+            <td class="meta-value">${log.user?.fullName || ''}</td>
+            <td class="meta-label">Shift Date / تاريخ الوردية:</td>
+            <td class="meta-value">${log.shiftDate}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Submitted At / وقت التقديم:</td>
+            <td class="meta-value">${dateStr} @ ${timeStr}</td>
+            <td class="meta-label">Compliance / المطابقة:</td>
+            <td class="meta-value">
+              <span class="compliance-badge ${comp.isCompliant ? 'badge-compliant' : 'badge-noncompliant'}">
+                ${comp.isCompliant ? 'Compliant / مطابق' : 'Non-Compliant / غير مطابق'}
+              </span>
+            </td>
+          </tr>
+        </table>
+
+        <h2 style="font-size: 18px; color: #2d4d48; margin-bottom: 12px; border-bottom: 2px solid #e2f0ec; padding-bottom: 6px; text-align: left;">
+          Checklist Items / بنود قائمة التحقق
+        </h2>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th style="background: #00A591; color: #ffffff; text-align: left; padding: 10px 16px; font-size: 13px; text-transform: uppercase;">Task / المهمة</th>
+              <th style="background: #00A591; color: #ffffff; text-align: left; padding: 10px 16px; font-size: 13px; text-transform: uppercase; width: 30%;">Status / الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <div class="footer-container">
+          <div style="font-size: 11px; color: #688883; text-align: left;">
+            <p style="margin: 0 0 4px 0;">This report is digitally generated by RATP Dev Mobility Cairo Compliance System.</p>
+            <p style="margin: 0;">Report ID: ${log.id}</p>
+          </div>
+          ${signatureHtml}
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   // Calculate dynamic stats widgets values based on currently filtered logs
   const stats = {
     total: checklistLogs.length,
@@ -406,15 +625,16 @@ export default function ComplianceDashboard() {
                   <th>Shift Date</th>
                   <th>Procedure</th>
                   <th>Compliance</th>
+                  <th>Signature</th>
                   <th>Submitted At</th>
-                  <th style={{ width: 140 }}>Actions</th>
+                  <th style={{ width: 180 }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40 }}><Loader size={22} className="spin" style={{ color: 'var(--brand-accent)' }} /></td></tr>
+                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40 }}><Loader size={22} className="spin" style={{ color: 'var(--brand-accent)' }} /></td></tr>
                 ) : displayedLogs.length === 0 ? (
-                  <tr><td colSpan={7}><div className="empty-state"><div className="empty-state-icon">📋</div><h3>No form records found</h3></div></td></tr>
+                  <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon">📋</div><h3>No form records found</h3></div></td></tr>
                 ) : displayedLogs.map(log => {
                   const comp = getComplianceStatus(log);
                   return (
@@ -472,6 +692,29 @@ export default function ComplianceDashboard() {
                             </span>
                           </div>
                         </td>
+                        {/* Signature Column */}
+                        <td>
+                          {log.user?.signatureData ? (
+                            <img
+                              src={log.user.signatureData}
+                              alt="Signature"
+                              style={{
+                                maxHeight: 28,
+                                maxWidth: 80,
+                                objectFit: 'contain',
+                                background: '#ffffff',
+                                border: '1px solid var(--border)',
+                                borderRadius: 'var(--radius-sm)',
+                                padding: '2px 4px',
+                                display: 'block'
+                              }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              No Signature
+                            </span>
+                          )}
+                        </td>
                         <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                           <div>{new Date(log.submittedAt).toLocaleDateString('en-GB')}</div>
                           <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
@@ -479,20 +722,32 @@ export default function ComplianceDashboard() {
                           </div>
                         </td>
                         <td>
-                          <button
-                            onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
-                            style={{
-                              padding: '4px 10px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 700,
-                              background: 'rgba(0,165,145,0.08)', color: 'var(--brand-primary)', border: '1px solid rgba(0,165,145,0.18)', cursor: 'pointer'
-                            }}
-                          >
-                            {expandedLogId === log.id ? 'Hide Answers' : 'View Answers'}
-                          </button>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                              style={{
+                                padding: '4px 10px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 700,
+                                background: 'rgba(0,165,145,0.08)', color: 'var(--brand-primary)', border: '1px solid rgba(0,165,145,0.18)', cursor: 'pointer'
+                              }}
+                            >
+                              {expandedLogId === log.id ? 'Hide' : 'Answers'}
+                            </button>
+                            <button
+                              onClick={() => downloadPDF(log)}
+                              style={{
+                                padding: '4px 10px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 700,
+                                background: 'rgba(99,102,241,0.08)', color: '#6366f1', border: '1px solid rgba(99,102,241,0.18)', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: 4
+                              }}
+                            >
+                              <Download size={11} /> PDF
+                            </button>
+                          </div>
                         </td>
                       </tr>
                       {expandedLogId === log.id && (
                         <tr>
-                          <td colSpan={7} style={{ background: 'var(--bg-hover)', padding: '16px 24px' }}>
+                          <td colSpan={8} style={{ background: 'var(--bg-hover)', padding: '16px 24px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 600 }}>
                               <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>
                                 Submitted Form Field Details:

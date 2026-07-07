@@ -691,6 +691,7 @@ export default function SOPViewPage() {
   const [historyLogs, setHistoryLogs] = useState([]); // local trace of step acknowledgments
   const [submittingLog, setSubmittingLog] = useState(false);
   const [wizardSessionId, setWizardSessionId] = useState(null); // backend session id for this wizard run
+  const [navHistory, setNavHistory] = useState([]); // track navigation history for back button
 
   useEffect(() => {
     sopService.get(id).then(r => setSop(r.data)).finally(() => setLoading(false));
@@ -731,6 +732,15 @@ export default function SOPViewPage() {
   // Wizard navigation handlers
   const handleAcknowledge = async () => {
     if (!activeStep) return;
+
+    // Save current wizard state in navigation history
+    setNavHistory(prev => [...prev, {
+      currentMainIndex,
+      currentBranch,
+      currentBranchIndex,
+      selectedDecision,
+      isAcknowledged
+    }]);
 
     setSubmittingLog(true);
     try {
@@ -850,6 +860,23 @@ export default function SOPViewPage() {
     setWizardCompleted(false);
     setHistoryLogs([]);
     setWizardSessionId(null); // reset so a new session is created on next acknowledge
+    setNavHistory([]); // clear navigation history
+  };
+
+  const handleBack = () => {
+    if (navHistory.length === 0) return;
+    const prev = navHistory[navHistory.length - 1];
+    setNavHistory(h => h.slice(0, -1));
+
+    setCurrentMainIndex(prev.currentMainIndex);
+    setCurrentBranch(prev.currentBranch);
+    setCurrentBranchIndex(prev.currentBranchIndex);
+    setSelectedDecision(prev.selectedDecision);
+    setIsAcknowledged(prev.isAcknowledged);
+    setWizardCompleted(false);
+    
+    // Remove last step from local history logs
+    setHistoryLogs(l => l.slice(0, -1));
   };
 
   // Progress calculations
@@ -1088,7 +1115,24 @@ export default function SOPViewPage() {
                   )}
 
                   {/* Wizard control button */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: navHistory.length > 0 ? 'space-between' : 'flex-end', alignItems: 'center', marginTop: 20 }}>
+                    {navHistory.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleBack}
+                        style={{
+                          padding: '10px 20px', borderRadius: 8, fontWeight: 700, fontSize: '0.88rem',
+                          background: 'transparent',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid var(--border)',
+                          cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <ArrowLeft size={14} style={{ transform: lang === 'ar' ? 'rotate(180deg)' : 'none' }} />
+                        {lang === 'ar' ? 'السابق' : 'Back'}
+                      </button>
+                    )}
                     {(() => {
                       const isDecisionQuestion = activeStep && activeStep.stepType === 'decision' && currentBranch === null;
                       const canAcknowledge = isDecisionQuestion ? !!selectedDecision : true;
@@ -1171,6 +1215,15 @@ export default function SOPViewPage() {
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 28 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleBack}
+                      style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <ArrowLeft size={14} style={{ transform: lang === 'ar' ? 'rotate(180deg)' : 'none' }} />
+                      {lang === 'ar' ? 'الخطوة السابقة' : 'Back to Step'}
+                    </button>
                     <button
                       type="button"
                       className="btn btn-secondary"

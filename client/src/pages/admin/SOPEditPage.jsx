@@ -38,13 +38,12 @@ function CategorySelector({ tree, categoryId, onChange }) {
   const handleRootChange = (rootId) => {
     setSelectedRoot(rootId);
     setSelectedSub('');
-    const kids = tree.find(r => r.id === rootId)?.children || [];
-    onChange(kids.length === 0 ? rootId : '');
+    onChange(rootId);
   };
 
   const handleSubChange = (subId) => {
     setSelectedSub(subId);
-    onChange(subId);
+    onChange(subId || selectedRoot);
   };
 
   return (

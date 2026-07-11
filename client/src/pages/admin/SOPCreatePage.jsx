@@ -41,15 +41,12 @@ function CategorySelector({ tree, categoryId, onChange }) {
   const handleRootChange = (rootId) => {
     setSelectedRoot(rootId);
     setSelectedSub('');
-    // If root has no children, use root as the categoryId
-    const root = tree.find(r => r.id === rootId);
-    const kids = root?.children || [];
-    onChange(kids.length === 0 ? rootId : '');
+    onChange(rootId);
   };
 
   const handleSubChange = (subId) => {
     setSelectedSub(subId);
-    onChange(subId);
+    onChange(subId || selectedRoot);
   };
 
   return (

@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, ClipboardCheck, Loader, Eye, EyeOff } from 'lucide-react';
 import { safetyNoticeService } from '../../services/services';
+import { getRoleLabel } from '../../utils/roleHelper';
+
+const ROLES = ['admin', 'station_manager', 'station_master', 'transport_manager', 'driver', 'occ'];
 
 export default function SafetyNoticesPage() {
   const navigate = useNavigate();
@@ -9,6 +12,7 @@ export default function SafetyNoticesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
 
   const load = () => {
     setLoading(true);
@@ -49,7 +53,9 @@ export default function SafetyNoticesPage() {
     const matchesStatus = statusFilter === '' || 
                          (statusFilter === 'published' && wi.isPublished) || 
                          (statusFilter === 'draft' && !wi.isPublished);
-    return matchesSearch && matchesStatus;
+    const matchesRole = roleFilter === '' || 
+                        (wi.permittedRoles && wi.permittedRoles.includes(roleFilter));
+    return matchesSearch && matchesStatus && matchesRole;
   });
 
   return (
@@ -84,6 +90,16 @@ export default function SafetyNoticesPage() {
           <option value="">All Statuses</option>
           <option value="published">Published</option>
           <option value="draft">Draft</option>
+        </select>
+        <select 
+          className="filter-select" 
+          value={roleFilter} 
+          onChange={e => setRoleFilter(e.target.value)}
+        >
+          <option value="">All Target Roles</option>
+          {ROLES.map(r => (
+            <option key={r} value={r}>{getRoleLabel(r)}</option>
+          ))}
         </select>
       </div>
 
@@ -143,7 +159,7 @@ export default function SafetyNoticesPage() {
                                 textTransform: 'capitalize'
                               }}
                             >
-                              {role.replace('_', ' ')}
+                              {getRoleLabel(role)}
                             </span>
                           ))}
                         </div>

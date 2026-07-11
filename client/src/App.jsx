@@ -24,6 +24,9 @@ import SafetyNoticeLogsPage from './pages/admin/SafetyNoticeLogsPage';
 import SafetyNoticesBrowsePage from './pages/viewer/SafetyNoticesBrowsePage';
 import OpeningClosingFormPage from './pages/admin/OpeningClosingFormPage';
 import OpeningClosingSubmitPage from './pages/viewer/OpeningClosingSubmitPage';
+import DriverServiceFormPage from './pages/viewer/DriverServiceFormPage';
+import DriverFormsAdminPage from './pages/admin/DriverFormsAdminPage';
+import DriverFormsAnalysisPage from './pages/admin/DriverFormsAnalysisPage';
 
 /**
  * SignatureGate — wraps all authenticated content.
@@ -107,6 +110,8 @@ export default function App() {
             <Route path="safety-notices/:id/edit" element={<SafetyNoticeEditPage />} />
             <Route path="safety-notices/:id/logs" element={<SafetyNoticeLogsPage />} />
             <Route path="opening-closing" element={<OpeningClosingFormPage />} />
+            <Route path="driver-forms" element={<DriverFormsAdminPage />} />
+            <Route path="driver-analysis" element={<DriverFormsAnalysisPage />} />
           </Route>
 
           {/* Station Master Portal */}
@@ -118,6 +123,7 @@ export default function App() {
           <Route path="/sop/:id" element={<ProtectedRoute><SOPViewPage /></ProtectedRoute>} />
           <Route path="/safety-notices" element={<ProtectedRoute><SafetyNoticesBrowsePage /></ProtectedRoute>} />
           <Route path="/opening-closing" element={<StationMasterRoute><OpeningClosingSubmitPage /></StationMasterRoute>} />
+          <Route path="/driver-form" element={<ProtectedRoute><DriverServiceFormPage /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

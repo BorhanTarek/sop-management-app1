@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, UserCheck, Loader } from 'lucide-react';
 import { userService } from '../../services/services';
+import { getRoleLabel } from '../../utils/roleHelper';
 
 const ROLES = ['admin', 'station_manager', 'station_master', 'transport_manager', 'driver', 'occ'];
 
@@ -57,7 +58,12 @@ function UserModal({ user, onClose, onSaved }) {
             </div>
             <div className="form-group">
               <label className="form-label">Department</label>
-              <input className="form-control" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} />
+              <select className="form-control" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))}>
+                <option value="">Select Department</option>
+                <option value="OPS">OPS</option>
+                <option value="CS">CS</option>
+                <option value="Maintenance">Maintenance</option>
+              </select>
             </div>
           </div>
           <div className="form-group">
@@ -83,7 +89,7 @@ function UserModal({ user, onClose, onSaved }) {
                     transition: 'all 0.15s ease',
                   }}
                   onClick={() => toggleRole(r)}>
-                  {r.replace('_', ' ')}
+                  {getRoleLabel(r)}
                 </button>
               ))}
             </div>
@@ -152,7 +158,7 @@ export default function UsersPage() {
         </div>
         <select className="filter-select" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
           <option value="">All Roles</option>
-          {ROLES.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
+          {ROLES.map(r => <option key={r} value={r}>{getRoleLabel(r)}</option>)}
         </select>
       </div>
 
@@ -183,7 +189,7 @@ export default function UsersPage() {
                               background: `${roleColor[r] || '#6366f1'}22`, color: roleColor[r] || '#6366f1',
                               border: `1px solid ${roleColor[r] || '#6366f1'}44`,
                             }}>
-                              {r.replace('_', ' ')}
+                              {getRoleLabel(r)}
                             </span>
                           ))}
                         </div>

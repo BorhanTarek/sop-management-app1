@@ -76,6 +76,13 @@ export const checklistService = {
   getLogs: () => api.get('/checklists/logs'),
 };
 
+export const driverFormService = {
+  submit: (data) => api.post('/driver-forms', data),
+  list: (params) => api.get('/driver-forms', { params }),
+  get: (id) => api.get(`/driver-forms/${id}`),
+  delete: (id) => api.delete(`/driver-forms/${id}`),
+};
+
 export const signatureService = {
   get: () => api.get('/users/me/signature'),
   save: (signatureData) => api.post('/users/me/signature', { signatureData }),

@@ -383,7 +383,7 @@ export default function OpeningClosingSubmitPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img src={mobilityLogo} alt="Mobility Cairo Logo" style={{ height: 30, objectFit: 'contain' }} />
             <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.2)' }} />
-            <img src={ratpLogo} alt="RATP Dev Logo" style={{ height: 20, objectFit: 'contain', borderRadius: 2 }} style={{ borderRadius: 2 }} />
+            <img src={ratpLogo} alt="RATP Dev Logo" style={{ height: 20, objectFit: 'contain', borderRadius: 2 }} />
           </div>
         </div>
 

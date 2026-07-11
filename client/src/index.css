@@ -7,11 +7,11 @@
   --brand-light:      #def4ec;  /* Soft Mint background highlight */
   --brand-accent:     #00BFA5;  /* Bright Mint accent */
 
-  --bg-base:          #f4fcf9;  /* Pale mint-tinted gray background */
+  --bg-base:          transparent;  /* Transparent to inherit body gradient/grid */
   --bg-surface:       #ffffff;  /* Pure white cards/surface */
   --bg-card:          #ffffff;  /* Pure white card backgrounds */
   --bg-hover:         #eefaf6;  /* Extremely soft mint hover */
-  --bg-input:         #f4fcf9;  /* Light input backgrounds */
+  --bg-input:         #ffffff;  /* Solid input background to avoid transparency on text fields */
 
   --text-primary:     #082823;  /* Dark firtree pine text */
   --text-secondary:   #2d4d48;  /* Medium pine-slate text */
@@ -45,10 +45,33 @@
 html { font-size: 14px; scroll-behavior: smooth; }
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background: var(--bg-base);
+
+  /* ── RATP DEV Mobility Cairo — Option C background ── */
+  background-color: #f0faf8;
+  background-image:
+    /* Diagonal metro lines wavy paths SVG */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000'><circle cx='920' cy='500' r='250' fill='none' stroke='%2300A591' stroke-width='48' opacity='0.08' /><circle cx='920' cy='500' r='248' fill='none' stroke='%2300A591' stroke-width='2' opacity='0.15' /><path d='M -50 950 C 200 800, 150 650, 250 550 C 350 450, 450 500, 500 350 C 550 200, 750 250, 850 150 C 900 100, 950 50, 1050 -50' fill='none' stroke='%2300A591' stroke-width='3.2' opacity='0.30' /><circle cx='120' cy='810' r='5.5' fill='%2300A591' opacity='0.45' /><circle cx='250' cy='550' r='5.5' fill='%2300A591' opacity='0.45' /><circle cx='500' cy='350' r='5.5' fill='%2300A591' opacity='0.45' /><circle cx='700' cy='235' r='5.5' fill='%2300A591' opacity='0.45' /><circle cx='850' cy='150' r='5.5' fill='%2300A591' opacity='0.45' /><path d='M -50 1000 C 150 900, 180 750, 150 650 C 120 550, 300 480, 400 320 C 500 160, 680 150, 800 80 C 900 30, 950 0, 1050 -50' fill='none' stroke='%2300a591' stroke-width='1.8' opacity='0.20' /><circle cx='150' cy='650' r='4.8' fill='%2300A591' opacity='0.35' /><circle cx='400' cy='320' r='4.8' fill='%2300A591' opacity='0.35' /><circle cx='800' cy='80' r='4.8' fill='%2300A591' opacity='0.35' /><path d='M -50 900 C 100 850, 80 500, 300 400 C 450 320, 650 350, 750 200 C 800 130, 900 80, 1050 20' fill='none' stroke='%2300A591' stroke-width='1.2' opacity='0.12' /><circle cx='300' cy='400' r='3.8' fill='%2300A591' opacity='0.28' /><circle cx='750' cy='200' r='3.8' fill='%2300A591' opacity='0.28' /></svg>"),
+    /* Secondary circle echo */
+    radial-gradient(ellipse 400px 400px at 102% 42%, transparent 55%, rgba(0, 165, 145, 0.05) 58%, transparent 62%),
+    /* Teal top-left ambient glow */
+    radial-gradient(ellipse 700px 500px at -6% -8%, rgba(0, 191, 165, 0.11) 0%, transparent 62%),
+    /* Navy blue bottom-right depth accent */
+    radial-gradient(ellipse 600px 700px at 104% 104%, rgba(21, 101, 192, 0.06) 0%, transparent 62%),
+    /* Micro dot grid */
+    radial-gradient(circle, rgba(0, 165, 145, 0.13) 1px, transparent 1px);
+  background-size:
+    cover,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    22px 22px;
+  background-attachment: fixed;
+
   color: var(--text-primary);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  min-width: 100vw;
 }
 img { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
@@ -74,6 +97,8 @@ p  { color: var(--text-secondary); }
   grid-template-columns: var(--sidebar-w) 1fr;
   grid-template-rows: var(--topbar-h) 1fr;
   min-height: 100vh;
+  min-width: 100vw;
+  background: transparent; /* let body gradient show through */
 }
 .app-shell .sidebar  { grid-row: 1 / -1; }
 .app-shell .topbar   { grid-column: 2; }
@@ -81,8 +106,10 @@ p  { color: var(--text-secondary); }
 
 /* ─── Sidebar ───────────────────────────────────────── */
 .sidebar {
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid rgba(0, 165, 145, 0.12);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -177,8 +204,10 @@ p  { color: var(--text-secondary); }
 /* ─── Topbar ────────────────────────────────────────── */
 .topbar {
   height: var(--topbar-h);
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(0, 165, 145, 0.12);
   display: flex;
   align-items: center;
   padding: 0 28px;
@@ -191,7 +220,7 @@ p  { color: var(--text-secondary); }
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
 /* ─── Main Content ──────────────────────────────────── */
-.main { background: var(--bg-base); }
+.main { background: transparent; width: 100%; }
 .page { padding: 28px; }
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
 .page-header h1 { font-size: 1.5rem; }

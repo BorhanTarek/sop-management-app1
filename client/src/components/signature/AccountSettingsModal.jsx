@@ -3,6 +3,7 @@ import { X, PenLine, User, ShieldCheck, Clock } from 'lucide-react';
 import SignaturePad from './SignaturePad';
 import { signatureService } from '../../services/services';
 import { useAuthStore } from '../../store/authStore';
+import { getRoleLabel } from '../../utils/roleHelper';
 
 /**
  * Slide-in Account Settings modal.
@@ -156,11 +157,11 @@ export default function AccountSettingsModal({ isOpen, onClose }) {
                 {user?.roles?.map(role => (
                   <span key={role} style={{
                     padding: '2px 8px', borderRadius: 99,
-                    fontSize: '0.65rem', fontWeight: 700, textTransform: 'capitalize',
+                    fontSize: '0.65rem', fontWeight: 700,
                     background: 'rgba(0,165,145,0.12)', color: 'var(--brand-primary)',
                     border: '1px solid rgba(0,165,145,0.2)',
                   }}>
-                    {role.replace('_', ' ')}
+                    {getRoleLabel(role)}
                   </span>
                 ))}
               </div>

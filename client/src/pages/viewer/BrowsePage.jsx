@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, ArrowLeft, Search, Settings, Loader, BookOpen, ClipboardCheck } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Search, Settings, Loader, BookOpen, ClipboardCheck, FileSpreadsheet, Menu, X } from 'lucide-react';
 import { categoryService, sopService } from '../../services/services';
 import { useAuthStore } from '../../store/authStore';
 import ratpLogo from '../../assets/RDMC LOGO.jpg';
@@ -19,6 +19,7 @@ export default function BrowsePage() {
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Language state
   const [lang, setLang] = useState(localStorage.getItem('portal_lang') || 'en');
@@ -122,34 +123,102 @@ export default function BrowsePage() {
             {lang === 'en' ? 'العربية' : 'English'}
           </button>
           
-          {(isStationMaster() || isAdmin() || user?.roles?.includes('station_manager')) && (
-            <button onClick={() => navigate('/opening-closing')} style={{
+          {/* Hamburger Menu Toggle */}
+          <button 
+            onClick={() => setMenuOpen(!menuOpen)} 
+            title="Menu"
+            style={{
               background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
-              borderRadius: 'var(--radius-sm)', padding: '6px 12px',
-              color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 6
-            }}>
-              <ClipboardCheck size={13} /> {translations[lang].openingClosing}
-            </button>
-          )}
-
-          <button onClick={() => navigate('/safety-notices')} style={{
-            background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
-            borderRadius: 'var(--radius-sm)', padding: '6px 12px',
-            color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 6
-          }}>
-            <BookOpen size={13} /> {translations[lang].safetyNoticesButton}
+              borderRadius: 'var(--radius-sm)', width: 34, height: 34,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', cursor: 'pointer', outline: 'none', transition: 'all 0.15s ease'
+            }}
+          >
+            {menuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
-          {isAdmin() && (
-            <button onClick={() => navigate('/admin')} style={{
-              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
-              borderRadius: 'var(--radius-sm)', padding: '6px 12px',
-              color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 6
+
+          {menuOpen && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              right: lang === 'en' ? 0 : 'auto',
+              left: lang === 'ar' ? 0 : 'auto',
+              marginTop: 10,
+              background: '#ffffff',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-lg)',
+              padding: '6px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              minWidth: 220,
+              zIndex: 1000,
             }}>
-              <Settings size={13} /> Admin
-            </button>
+              {(isStationMaster() || isAdmin() || user?.roles?.includes('station_manager')) && (
+                <button 
+                  onClick={() => { setMenuOpen(false); navigate('/opening-closing'); }} 
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)',
+                    fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', width: '100%',
+                    textAlign: lang === 'ar' ? 'right' : 'left', background: 'transparent',
+                    border: 'none', transition: 'background 0.15s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <ClipboardCheck size={14} color="var(--brand-primary)" /> {translations[lang].openingClosing}
+                </button>
+              )}
+
+              <button 
+                onClick={() => { setMenuOpen(false); navigate('/driver-form'); }} 
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)',
+                  fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', width: '100%',
+                  textAlign: lang === 'ar' ? 'right' : 'left', background: 'transparent',
+                  border: 'none', transition: 'background 0.15s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <FileSpreadsheet size={14} color="var(--brand-primary)" /> Driver Form
+              </button>
+
+              <button 
+                onClick={() => { setMenuOpen(false); navigate('/safety-notices'); }} 
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)',
+                  fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', width: '100%',
+                  textAlign: lang === 'ar' ? 'right' : 'left', background: 'transparent',
+                  border: 'none', transition: 'background 0.15s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <BookOpen size={14} color="var(--brand-primary)" /> {translations[lang].safetyNoticesButton}
+              </button>
+
+              {isAdmin() && (
+                <button 
+                  onClick={() => { setMenuOpen(false); navigate('/admin'); }} 
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)',
+                    fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', width: '100%',
+                    textAlign: lang === 'ar' ? 'right' : 'left', background: 'transparent',
+                    border: 'none', transition: 'background 0.15s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <Settings size={14} color="var(--brand-primary)" /> Admin
+                </button>
+              )}
+            </div>
           )}
           {/* User avatar — opens Account Settings */}
           <button

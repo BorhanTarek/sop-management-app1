@@ -28,30 +28,103 @@ export default function SignaturePad({ onSave, saving = false, label = 'Draw you
   const handleSave = () => {
     try {
       if (!sigRef.current || sigRef.current.isEmpty()) return;
+      
       let base64 = '';
-      if (typeof sigRef.current.getTrimmedCanvas === 'function') {
-        base64 = sigRef.current.getTrimmedCanvas().toDataURL('image/png');
-      } else if (typeof sigRef.current.getCanvas === 'function') {
-        base64 = sigRef.current.getCanvas().toDataURL('image/png');
-      } else {
+      if (typeof sigRef.current.getCanvas === 'function') {
+        const canvas = sigRef.current.getCanvas();
+        try {
+          // Custom canvas trimming to avoid ESM/CJS build issues with external trim-canvas library
+          const trimmedCanvas = trimCanvas(canvas);
+          base64 = trimmedCanvas.toDataURL('image/png');
+        } catch (trimErr) {
+          console.warn('Trim canvas fallback active:', trimErr);
+          base64 = canvas.toDataURL('image/png');
+        }
+      } else if (typeof sigRef.current.toDataURL === 'function') {
         base64 = sigRef.current.toDataURL('image/png');
       }
+      
+      if (!base64) {
+        throw new Error('Failed to generate image data URL.');
+      }
+      
       onSave(base64);
     } catch (err) {
       console.error('Error getting signature image:', err);
-      try {
-        // Direct fallback on the signature pad instance
-        if (sigRef.current && typeof sigRef.current.toDataURL === 'function') {
-          const base64 = sigRef.current.toDataURL('image/png');
-          onSave(base64);
-        } else {
-          alert('Could not capture signature image from canvas.');
-        }
-      } catch (e) {
-        alert('Error saving signature: ' + err.message);
-      }
+      alert('Error saving signature: ' + err.message);
     }
   };
+
+  // Helper to trim empty/transparent space around canvas drawings
+  function trimCanvas(canvas) {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return canvas;
+    
+    const width = canvas.width;
+    const height = canvas.height;
+    const pixels = ctx.getImageData(0, 0, width, height);
+    const len = pixels.data.length;
+    
+    let bound = {
+      top: null,
+      left: null,
+      right: null,
+      bottom: null
+    };
+    
+    let x, y;
+    for (let i = 0; i < len; i += 4) {
+      if (pixels.data[i + 3] !== 0) { // check alpha channel (non-transparent)
+        x = (i / 4) % width;
+        y = Math.floor((i / 4) / width);
+        
+        if (bound.top === null) bound.top = y;
+        
+        if (bound.left === null) {
+          bound.left = x;
+        } else if (x < bound.left) {
+          bound.left = x;
+        }
+        
+        if (bound.right === null) {
+          bound.right = x;
+        } else if (x > bound.right) {
+          bound.right = x;
+        }
+        
+        if (bound.bottom === null) {
+          bound.bottom = y;
+        } else if (y > bound.bottom) {
+          bound.bottom = y;
+        }
+      }
+    }
+    
+    if (bound.top === null || bound.left === null || bound.right === null || bound.bottom === null) {
+      return canvas; // blank canvas, return original
+    }
+    
+    const trimmedWidth = bound.right - bound.left + 1;
+    const trimmedHeight = bound.bottom - bound.top + 1;
+    
+    // Add small padding around the signature
+    const pad = 6;
+    const copy = document.createElement('canvas');
+    copy.width = trimmedWidth + (pad * 2);
+    copy.height = trimmedHeight + (pad * 2);
+    const copyCtx = copy.getContext('2d');
+    
+    if (copyCtx) {
+      copyCtx.drawImage(
+        canvas,
+        bound.left, bound.top, trimmedWidth, trimmedHeight,
+        pad, pad, trimmedWidth, trimmedHeight
+      );
+      return copy;
+    }
+    
+    return canvas;
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

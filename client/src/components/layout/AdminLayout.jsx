@@ -2,18 +2,30 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import {
   LayoutDashboard, Users, FolderTree, FileText,
-  LogOut, ChevronRight, Bell, Activity, BookOpen, ClipboardCheck, ScrollText
+  LogOut, ChevronRight, Bell, Activity, BookOpen, ClipboardCheck, ScrollText, FileSpreadsheet, BarChart3
 } from 'lucide-react';
 import mobilityLogo from '../../assets/Logo-Mobility-Cairo.png';
+import { getRoleLabel } from '../../utils/roleHelper';
 
-const navItems = [
+const generalItems = [
   { label: 'Dashboard',     path: '/admin',                   icon: LayoutDashboard, exact: true },
+  { label: 'Safety Notices',path: '/admin/safety-notices',    icon: BookOpen },
+  { label: 'Users',         path: '/admin/users',             icon: Users },
+];
+
+const sopItems = [
   { label: 'SOPs',          path: '/admin/sops',              icon: FileText },
   { label: 'SOPs Logs',     path: '/admin/sops/logs',         icon: ScrollText },
-  { label: 'Safety Notices',path: '/admin/safety-notices',    icon: BookOpen },
+  { label: 'Categories',        path: '/admin/categories',      icon: FolderTree },
+];
+
+const driverItems = [
+  { label: 'Driver Forms',      path: '/admin/driver-forms',    icon: FileSpreadsheet },
+  { label: 'Driver Analysis',   path: '/admin/driver-analysis', icon: BarChart3 },
+];
+
+const stationItems = [
   { label: 'Opening & Closing', path: '/admin/opening-closing', icon: ClipboardCheck },
-  { label: 'Categories',    path: '/admin/categories',        icon: FolderTree },
-  { label: 'Users',         path: '/admin/users',             icon: Users },
   { label: 'Compliance',    path: '/admin/compliance',        icon: Activity },
 ];
 
@@ -37,8 +49,47 @@ export default function AdminLayout() {
         </div>
 
         <nav className="sidebar-nav">
-          <div className="nav-section-label">Main Menu</div>
-          {navItems.map(({ label, path, icon: Icon, exact }) => (
+          <div className="nav-section-label">General</div>
+          {generalItems.map(({ label, path, icon: Icon, exact }) => (
+            <NavLink
+              key={path}
+              to={path}
+              end={exact}
+              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            >
+              <Icon size={16} />
+              {label}
+            </NavLink>
+          ))}
+
+          <div className="nav-section-label">SOP</div>
+          {sopItems.map(({ label, path, icon: Icon, exact }) => (
+            <NavLink
+              key={path}
+              to={path}
+              end={exact}
+              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            >
+              <Icon size={16} />
+              {label}
+            </NavLink>
+          ))}
+
+          <div className="nav-section-label">Drivers</div>
+          {driverItems.map(({ label, path, icon: Icon, exact }) => (
+            <NavLink
+              key={path}
+              to={path}
+              end={exact}
+              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            >
+              <Icon size={16} />
+              {label}
+            </NavLink>
+          ))}
+
+          <div className="nav-section-label">Stations</div>
+          {stationItems.map(({ label, path, icon: Icon, exact }) => (
             <NavLink
               key={path}
               to={path}
@@ -62,7 +113,7 @@ export default function AdminLayout() {
             <div className="avatar">{initials}</div>
             <div className="sidebar-user-info">
               <div className="name">{user?.fullName}</div>
-              <div className="role">{user?.roles?.[0]}</div>
+              <div className="role">{getRoleLabel(user?.roles?.[0])}</div>
             </div>
             <LogOut size={14} style={{ color: 'var(--text-muted)' }} />
           </div>

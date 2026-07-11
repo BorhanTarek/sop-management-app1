@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "PostgreSQL"
   url      = env("DATABASE_URL")
 }
 
@@ -237,7 +237,7 @@ model SopSession {
   shiftDate     String    // YYYY-MM-DD for grouping
 
   station       Station?        @relation(fields: [stationId], references: [id])
-  sop           Sop             @relation(fields: [sopId], references: [id])
+  sop           Sop             @relation(fields: [sopId], references: [id], onDelete: Cascade)
   user          User            @relation(fields: [userId], references: [id])
   stepLogs      SopSessionStep[]
 

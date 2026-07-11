@@ -150,62 +150,76 @@ async function update(id, { title, categoryId, ownerId, docType, tags, steps, co
   const newVersion = bumpVersion(existing.currentVersion, bumpType || 'minor');
   const safeId = await safeUserId(userId);
 
-  // Mark old version as not current
-  await prisma.sopVersion.updateMany({ where: { sopId: id, isCurrent: true }, data: { isCurrent: false } });
+  return prisma.$transaction(async (tx) => {
+    // Mark old version as not current
+    await tx.sopVersion.updateMany({ where: { sopId: id, isCurrent: true }, data: { isCurrent: false } });
 
-  // Create new version
-  const version = await prisma.sopVersion.create({
-    data: {
-      sopId: id,
-      version: newVersion,
-      contentJson: contentJson || JSON.stringify({ steps }),
-      isCurrent: true,
-      createdById: safeId,
-    },
-  });
-
-  if (steps && steps.length > 0) {
-    await prisma.sopStep.createMany({
-      data: steps.map((s, i) => ({
-        sopId: id,
-        versionId: version.id,
-        stepNumber: i + 1,
-        title: s.title,
-        body: s.body,
-        stepType: s.stepType || 'action',
-        refCode: s.refCode,
-        sortOrder: i,
-        branchData: s.branchData || null,
-        attentionPoints: s.attentionPoints?.length ? JSON.stringify(s.attentionPoints) : null,
-        safetyPoints:    s.safetyPoints?.length    ? JSON.stringify(s.safetyPoints)    : null,
-      })),
+    // Clean up any orphaned version with the same version name to prevent unique constraint failures
+    const orphanedVersion = await tx.sopVersion.findFirst({
+      where: { sopId: id, version: newVersion }
     });
-  }
+    if (orphanedVersion) {
+      await tx.sopStep.deleteMany({ where: { versionId: orphanedVersion.id } });
+      await tx.sopVersion.delete({ where: { id: orphanedVersion.id } });
+    }
 
-  await prisma.changeLog.create({
-    data: {
-      sopId: id,
-      versionFrom: existing.currentVersion,
-      versionTo: newVersion,
-      changeSummary: changeSummary || 'Updated',
-      changedById: safeId,
-    },
-  });
+    // Clean up any orphaned change logs for this version target
+    await tx.changeLog.deleteMany({ where: { sopId: id, versionTo: newVersion } });
 
-  const data = { title, categoryId, ownerId, docType, tags, currentVersion: newVersion, updatedAt: new Date() };
+    // Create new version
+    const version = await tx.sopVersion.create({
+      data: {
+        sopId: id,
+        version: newVersion,
+        contentJson: contentJson || JSON.stringify({ steps }),
+        isCurrent: true,
+        createdById: safeId,
+      },
+    });
 
-  if (permittedRoles !== undefined) {
-    const roles = await prisma.role.findMany({ where: { name: { in: permittedRoles } } });
-    data.roleVisibility = {
-      deleteMany: {},
-      create: roles.map(r => ({ roleId: r.id }))
-    };
-  }
+    if (steps && steps.length > 0) {
+      await tx.sopStep.createMany({
+        data: steps.map((s, i) => ({
+          sopId: id,
+          versionId: version.id,
+          stepNumber: i + 1,
+          title: s.title,
+          body: s.body,
+          stepType: s.stepType || 'action',
+          refCode: s.refCode,
+          sortOrder: i,
+          branchData: s.branchData || null,
+          attentionPoints: s.attentionPoints?.length ? JSON.stringify(s.attentionPoints) : null,
+          safetyPoints:    s.safetyPoints?.length    ? JSON.stringify(s.safetyPoints)    : null,
+        })),
+      });
+    }
 
-  return prisma.sop.update({
-    where: { id },
-    data,
-    include: { category: true, owner: { select: { id: true, fullName: true } } },
+    await tx.changeLog.create({
+      data: {
+        sopId: id,
+        versionFrom: existing.currentVersion,
+        versionTo: newVersion,
+        changeSummary: changeSummary || 'Updated',
+        changedById: safeId,
+      },
+    });
+
+    const data = { title, categoryId, ownerId, docType, tags, currentVersion: newVersion, updatedAt: new Date() };
+
+    if (permittedRoles !== undefined) {
+      const roles = await tx.role.findMany({ where: { name: { in: permittedRoles } } });
+      data.roleVisibility = {
+        deleteMany: {},
+        create: roles.map(r => ({ roleId: r.id }))
+      };
+    }
+
+    return tx.sop.update({
+      where: { id },
+      data,
+      include: { category: true, owner: { select: { id: true, fullName: true } } },
+    });
   });
 }
 

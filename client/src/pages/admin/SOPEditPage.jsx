@@ -10,75 +10,129 @@ const PERMITTED_ROLES = ['station_manager', 'station_master', 'transport_manager
 /* StepBuilder imported from ../../components/sop/StepBuilder */
 
 /* ── Category / Sub-category Selector ───────────────── */
-function CategorySelector({ tree, categoryId, onChange }) {
-  const initialRoot = categoryId
-    ? (tree.find(r => r.id === categoryId)
-        ? categoryId
-        : tree.find(r => r.children?.some(c => c.id === categoryId))?.id || '')
-    : '';
-
-  const [selectedRoot, setSelectedRoot] = useState(initialRoot);
-  const [selectedSub, setSelectedSub]   = useState(
-    categoryId && categoryId !== initialRoot ? categoryId : ''
-  );
-
-  // Re-sync when categoryId prop changes (e.g. after data loads)
-  useEffect(() => {
-    if (!categoryId) { setSelectedRoot(''); setSelectedSub(''); return; }
-    const rootMatch = tree.find(r => r.id === categoryId);
-    if (rootMatch) { setSelectedRoot(categoryId); setSelectedSub(''); }
-    else {
-      const parent = tree.find(r => r.children?.some(c => c.id === categoryId));
-      if (parent) { setSelectedRoot(parent.id); setSelectedSub(categoryId); }
+const findPath = (nodes, targetId, currentPath = []) => {
+  for (const node of nodes) {
+    if (node.id === targetId) return [...currentPath, node.id];
+    if (node.children && node.children.length > 0) {
+      const found = findPath(node.children, targetId, [...currentPath, node.id]);
+      if (found) return found;
     }
-  }, [categoryId, tree.length]);
+  }
+  return null;
+};
 
-  const subCategories = tree.find(r => r.id === selectedRoot)?.children || [];
+const findNodeById = (nodes, id) => {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    if (node.children && node.children.length > 0) {
+      const found = findNodeById(node.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+};
 
-  const handleRootChange = (rootId) => {
-    setSelectedRoot(rootId);
-    setSelectedSub('');
-    onChange(rootId);
+function CategorySelector({ tree, categoryId, onChange }) {
+  const [path, setPath] = useState([]);
+
+  // Initialize path from categoryId
+  useEffect(() => {
+    if (!categoryId || tree.length === 0) {
+      setPath([]);
+      return;
+    }
+    const foundPath = findPath(tree, categoryId);
+    if (foundPath) {
+      setPath(foundPath);
+    } else {
+      setPath([]);
+    }
+  }, [categoryId, tree]);
+
+  // Find node by path helper
+  const getNodeByPath = (pathArray) => {
+    let currentNodes = tree;
+    let lastNode = null;
+    for (const id of pathArray) {
+      const found = currentNodes.find(n => n.id === id);
+      if (!found) return null;
+      lastNode = found;
+      currentNodes = found.children || [];
+    }
+    return lastNode;
   };
 
-  const handleSubChange = (subId) => {
-    setSelectedSub(subId);
-    onChange(subId || selectedRoot);
+  // Handle dropdown change at a specific level
+  const handleLevelChange = (levelIndex, selectedValue) => {
+    const newPath = path.slice(0, levelIndex);
+    if (selectedValue) {
+      newPath.push(selectedValue);
+    }
+    setPath(newPath);
+    // Notify parent of the most specific selected category
+    const finalValue = newPath[newPath.length - 1] || '';
+    onChange(finalValue);
+  };
+
+  // Build the levels to render
+  const levels = [];
+  
+  // Always render level 0 (root categories)
+  levels.push({
+    label: 'Category',
+    options: tree,
+    value: path[0] || ''
+  });
+
+  // Render sub-category levels
+  for (let i = 0; i < path.length; i++) {
+    const currentNode = getNodeByPath(path.slice(0, i + 1));
+    if (currentNode && currentNode.children && currentNode.children.length > 0) {
+      levels.push({
+        label: i === 0 ? 'Sub-Category' : 'Sub-Sub-Category',
+        options: currentNode.children,
+        value: path[i + 1] || ''
+      });
+    }
+  }
+
+  // Render breadcrumbs
+  const getBreadcrumbString = () => {
+    return path.map(id => {
+      const node = findNodeById(tree, id);
+      return node ? node.name : '';
+    }).filter(Boolean).join(' > ');
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div className="form-group" style={{ marginBottom: 0 }}>
-        <label className="form-label">Category</label>
-        <select className="form-control" value={selectedRoot} onChange={e => handleRootChange(e.target.value)}>
-          <option value="">— Select Category —</option>
-          {tree.map(c => (
-            <option key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ''}{c.name}</option>
-          ))}
-        </select>
-      </div>
-
-      {selectedRoot && subCategories.length > 0 && (
-        <div className="form-group" style={{ marginBottom: 0 }}>
+      {levels.map((level, idx) => (
+        <div key={idx} className="form-group" style={{ marginBottom: 0 }}>
           <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <ChevronRight size={12} style={{ color: 'var(--brand-accent)' }} />
-            Sub-Category
+            {idx > 0 && <ChevronRight size={12} style={{ color: 'var(--brand-accent)' }} />}
+            {level.label}
           </label>
-          <select className="form-control" value={selectedSub}
-            onChange={e => handleSubChange(e.target.value)}
-            style={{ borderColor: 'rgba(26,158,150,0.4)' }}>
-            <option value="">— Select Sub-Category —</option>
-            {subCategories.map(c => (
-              <option key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ''}{c.name}</option>
+          <select
+            className="form-control"
+            value={level.value}
+            onChange={e => handleLevelChange(idx, e.target.value)}
+            style={idx > 0 ? { borderColor: 'rgba(26,158,150,0.4)' } : undefined}
+          >
+            <option value="">{idx === 0 ? '— Select Category —' : '— Select Sub-Category —'}</option>
+            {level.options.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.icon ? `${c.icon} ` : ''}{c.name}
+              </option>
             ))}
           </select>
         </div>
-      )}
+      ))}
 
-      {selectedRoot && (
+      {path.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          <span style={{ color: 'var(--brand-accent)' }}>{tree.find(r => r.id === selectedRoot)?.name}</span>
-          {selectedSub && <><ChevronRight size={11} /><span style={{ color: 'var(--text-primary)' }}>{subCategories.find(c => c.id === selectedSub)?.name}</span></>}
+          <span style={{ color: 'var(--brand-accent)' }}>
+            {getBreadcrumbString()}
+          </span>
         </div>
       )}
     </div>

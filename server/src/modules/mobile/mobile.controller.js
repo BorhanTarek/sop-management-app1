@@ -37,7 +37,7 @@ async function getSops(req, res, next) {
     };
 
     if (categoryId) {
-      whereClause.categoryId = parseInt(categoryId, 10);
+      whereClause.categoryId = categoryId;
     }
 
     if (search) {
@@ -61,7 +61,7 @@ async function getSops(req, res, next) {
 
 async function getSopDetails(req, res, next) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = req.params.id;
     const sop = await prisma.sop.findUnique({
       where: { id },
       include: {

@@ -12,6 +12,7 @@ const sessionRoutes = require('./modules/sessions/sessions.routes');
 const safetyNoticeRoutes = require('./modules/safetyNotices/safetyNotices.routes');
 const checklistRoutes = require('./modules/checklists/checklists.routes');
 const driverFormsRoutes = require('./modules/driverForms/driverForms.routes');
+const mobileRoutes = require('./modules/mobile/mobile.routes');
 const { errorHandler } = require('./middleware/errorHandler');
 const fs = require('fs');
 
@@ -38,6 +39,7 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/safety-notices', safetyNoticeRoutes);
 app.use('/api/checklists', checklistRoutes);
 app.use('/api/driver-forms', driverFormsRoutes);
+app.use('/api/mobile', mobileRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
